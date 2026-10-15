@@ -26,6 +26,7 @@ import QtQuick.Window
 import VLC.MainInterface
 import VLC.Style
 import VLC.Playlist
+import VLC.Player
 import VLC.Widgets as Widgets
 import VLC.Menus as Menus
 import VLC.Util
@@ -68,7 +69,7 @@ T.ToolBar {
 
     background:  Widgets.AcrylicBackground {
         enabled: root.useAcrylic
-        tintColor: theme.bg.primary
+        tintColor: VLCStyle.playerTopbar
     }
 
     contentItem: Item {
@@ -151,7 +152,7 @@ T.ToolBar {
 
                     sourceSize.width: VLCStyle.bannerButton_height
                     sourceSize.height: VLCStyle.bannerButton_height
-                    color: theme.accent
+                    color: VLCStyle.playerAccent
                 }
             }
         }
@@ -217,6 +218,29 @@ T.ToolBar {
                     }
                 }
             }
+        }
+
+        // Centered window title, matching the Figma player and library states.
+        T.Label {
+            id: windowTitle
+
+            anchors.left: navigationButtons.right
+            anchors.right: playqueueButtonsTop.left
+            anchors.leftMargin: VLCStyle.margin_normal
+            anchors.rightMargin: VLCStyle.margin_normal
+            anchors.verticalCenter: parent.verticalCenter
+
+            text: (Player.title && Player.title.toString().length > 0)
+                  ? Player.title
+                  : qsTr("VLC Media Player")
+            color: VLCStyle.playerForeground
+            font.pixelSize: VLCStyle.dp(12, VLCStyle.scale)
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+
+            Accessible.role: Accessible.StaticText
+            Accessible.name: text
         }
 
         Loader {
