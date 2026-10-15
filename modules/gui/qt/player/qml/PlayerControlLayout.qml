@@ -36,6 +36,10 @@ FocusScope {
 
     property int identifier: -1
 
+    // Optional inline content between native playback controls and right-side controls.
+    // The redesign uses this slot for the seek bar and time labels.
+    property Component inlineContent: null
+
     readonly property PlayerControlbarModel model: {
         if (!!MainCtx.controlbarProfileModel.currentModel)
             return MainCtx.controlbarProfileModel.currentModel.getModel(identifier)
@@ -74,10 +78,11 @@ FocusScope {
 
         anchors.fill: parent
 
-        active: !loaderCenter.active &&
-                playerControlLayout.model &&
-                ((playerControlLayout.model.left && (playerControlLayout.model.left.count > 0)) ||
-                (playerControlLayout.model.right && (playerControlLayout.model.right.count > 0)))
+        active: !!playerControlLayout.model &&
+                (playerControlLayout.inlineContent !== null ||
+                 (!loaderCenter.active &&
+                  ((playerControlLayout.model.left && (playerControlLayout.model.left.count > 0)) ||
+                   (playerControlLayout.model.right && (playerControlLayout.model.right.count > 0)))))
 
         focus: active
 
@@ -117,6 +122,38 @@ FocusScope {
                 }
             }
 
+            ControlRepeater {
+                id: centerRepeater
+                visible: playerControlLayout.inlineContent !== null
+
+                model: ControlListFilter {
+                    sourceModel: playerControlLayout.model.center
+                    player: Player
+                    ctx: MainCtx
+                }
+
+                Navigation.parentItem: playerControlLayout
+                availableWidth: loaderLeftRight.width
+                availableHeight: loaderLeftRight.height
+
+                Component.onCompleted: {
+                    requestLockUnlockAutoHide.connect(playerControlLayout.requestLockUnlockAutoHide)
+                    menuOpened.connect(playerControlLayout.menuOpened)
+                    playerControlLayout.forceUnlock.connect(centerRepeater.forceUnlock)
+                }
+            }
+
+            Loader {
+                id: inlineContentLoader
+                active: playerControlLayout.inlineContent !== null
+                visible: active
+                sourceComponent: playerControlLayout.inlineContent
+
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.minimumWidth: active ? VLCStyle.dp(180, VLCStyle.scale) : 0
+            }
+
             Item {
                 function containsVisibleItem(repeater) {
                     for (let i = 0; i < repeater.count; ++i) {
@@ -132,8 +169,8 @@ FocusScope {
                 Layout.minimumWidth: (containsVisibleItem(leftRepeater) && containsVisibleItem(rightRepeater)) ? playerControlLayout.layoutSpacing
                                                                                                                : 0
 
-                Layout.fillWidth: true
-                visible: true
+                Layout.fillWidth: playerControlLayout.inlineContent === null
+                visible: playerControlLayout.inlineContent === null
             }
 
             ControlRepeater {
@@ -181,7 +218,8 @@ FocusScope {
             rightMargin: layoutSpacing - spacing
         }
 
-        active: !!playerControlLayout.model?.left && (playerControlLayout.model.left.count > 0) &&
+        active: playerControlLayout.inlineContent === null &&
+                !!playerControlLayout.model?.left && (playerControlLayout.model.left.count > 0) &&
                 !loaderLeftRight.active
 
         focus: active
@@ -225,7 +263,8 @@ FocusScope {
         }
 
         // TODO: "ControlListFilter"'s count......
-        active: !!playerControlLayout.model && !!playerControlLayout.model.center && (playerControlLayout.model.center.count > 0)
+        active: playerControlLayout.inlineContent === null &&
+                !!playerControlLayout.model && !!playerControlLayout.model.center && (playerControlLayout.model.center.count > 0)
 
         Binding on width {
             delayed: true
@@ -291,7 +330,8 @@ FocusScope {
             leftMargin: layoutSpacing - spacing
         }
 
-        active: !!playerControlLayout.model && !!playerControlLayout.model.right && (playerControlLayout.model.right.count > 0) &&
+        active: playerControlLayout.inlineContent === null &&
+                !!playerControlLayout.model && !!playerControlLayout.model.right && (playerControlLayout.model.right.count > 0) &&
                 !loaderLeftRight.active
 
         sourceComponent: ControlLayout {
