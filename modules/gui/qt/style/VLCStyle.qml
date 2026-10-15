@@ -47,6 +47,16 @@ QtObject {
         ctx: MainCtx
     }
 
+    // VLC redesign palette tokens. Keep player surfaces separate from the
+    // operating-system palette so the desktop player stays visually consistent.
+    readonly property color playerCanvas: "#2B2927"
+    readonly property color playerTopbar: "#0E0E0E"
+    readonly property color playerControlBackground: "#090909"
+    readonly property color playerTrack: "#222222"
+    readonly property color playerAccent: "#D37918"
+    readonly property color playerForeground: "#969696"
+    readonly property color playerMutedForeground: "#6B6B6B"
+
     readonly property real highPixelDensityThreshold: 5.9 // 150 dpi (dpmm)
 
     // Sizes
