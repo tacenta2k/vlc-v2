@@ -41,7 +41,7 @@ T.ProgressBar {
     property bool _currentChapterHovered: false
     property real _tooltipPosition: (Widgets.PointingToolTipAttached.instance?.pos.x ?? 0.0) / width
 
-    property color backgroundColor: theme.bg.primary
+    property color backgroundColor: VLCStyle.playerTrack
     property real touchHandlerMargin: VLCStyle.touchHandlerMargin
 
     Keys.onRightPressed: Player.jumpFwd()
@@ -357,7 +357,7 @@ T.ProgressBar {
                     readonly property bool _hovered: hoverHandler.hovered &&
                                             (hoverHandler.point.position.x > x && hoverHandler.point.position.x < x+width)
 
-                    color: _currentChapter < 0 ? theme.fg.primary : control.backgroundColor
+                    color: _currentChapter < 0 ? VLCStyle.playerAccent : control.backgroundColor
                     width: sliderRect.width * seekpointsRect.endPosition - x - control._seekPointsDistance
                     x: sliderRect.width * seekpointsRect.startPosition
 
@@ -370,7 +370,7 @@ T.ProgressBar {
 
                         width: sliderRect.width * control.visualPosition - parent.x - control._seekPointsDistance
                         visible: parent._currentChapter === 0
-                        color: theme.fg.primary
+                        color: VLCStyle.playerAccent
 
                         // We use dynamic mutability group because time interpolation
                         // may induce rapid change:
@@ -431,7 +431,7 @@ T.ProgressBar {
             id: progressRect
             width: control.visualPosition * parent.width
             visible: !Player.hasChapters
-            color: theme.fg.primary
+            color: VLCStyle.playerAccent
             height: control.barHeight
             radius: control._seekPointsRadius
 
@@ -576,7 +576,7 @@ T.ProgressBar {
         implicitWidth: sliderHandle._size
         implicitHeight: sliderHandle._size
         radius: VLCStyle.margin_small
-        color: theme.fg.primary
+        color: VLCStyle.playerAccent
 
         // We use dynamic mutability group because time interpolation
         // may induce rapid change:
