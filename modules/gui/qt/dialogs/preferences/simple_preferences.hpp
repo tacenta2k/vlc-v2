@@ -46,6 +46,7 @@ class MLFoldersEditor;
 
 #include <QWidget>
 #include <QList>
+#include <QString>
 class QLineEdit;
 class QComboBox;
 class QToolButton;
@@ -82,8 +83,6 @@ enum {
 };
 
 class ConfigControl;
-class PrefsTree;
-class AdvPrefsPanel;
 
 #ifdef _WIN32
 class QTreeWidgetItem;
@@ -138,6 +137,7 @@ private:
     QList<ConfigControl *> controls;
 
     int number;
+    QString m_initialAccentColor;
 
     struct AudioControlGroup {
         AudioControlGroup(QLabel* label, QWidget* widget, QPushButton* button = nullptr)
@@ -179,14 +179,12 @@ private:
     Ui::SPrefsSubtitles m_subtitlesUI;
     Ui::SPrefsMediaLibrary m_medialibUI;
 
-    // Lazily created native advanced-config pages shown inside the redesigned shell.
-    PrefsTree *m_nativeConfigTree {};
-    AdvPrefsPanel *m_nativeConfigPanel {};
-    module_t **m_nativeModules {};
-    size_t m_nativeModuleCount {};
     QComboBox *m_networkCachingCombo {};
 
 /* Display only the options for the selected audio output */
+signals:
+    void advancedSettingsRequested();
+
 private slots:
     void lastfm_Changed( int );
     void updateAudioOptions( int );

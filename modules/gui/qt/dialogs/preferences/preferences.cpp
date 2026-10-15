@@ -568,6 +568,8 @@ void PrefsDialog::changeSimplePanel( int number )
     if( ! simple_panels[number] )
     {
         SPrefsPanel *insert = new SPrefsPanel( p_intf, simple_panels_stack, number ) ;
+        connect( insert, &SPrefsPanel::advancedSettingsRequested,
+                 this, &PrefsDialog::setAdvanced );
         simple_panels_stack->insertWidget( number, insert );
         simple_panels[number] = insert;
     }
