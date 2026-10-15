@@ -113,11 +113,11 @@ T.Pane {
     }
 
     background: Rectangle {
-        color: theme.bg.primary
+        color: VLCStyle.playerControlBackground
     }
 
     contentItem: ColumnLayout {
-        spacing: VLCStyle.margin_xsmall
+        spacing: VLCStyle.margin_xxxsmall
 
         readonly property real sliderY: row2.y
 
@@ -137,7 +137,7 @@ T.Pane {
                     const length = Player.length
                     return Player.time.formatHMS(length.isSubSecond() ? VLCTick.SubSecondFormattedAsMS : 0)
                 }
-                color: theme.fg.primary
+                color: VLCStyle.playerForeground
                 font: timeTextMetrics.font
                 horizontalAlignment: Text.AlignHCenter
 
@@ -265,8 +265,8 @@ T.Pane {
             id: pseudoRow
             Layout.fillWidth: true
             Layout.fillHeight: false
-            Layout.leftMargin: VLCStyle.margin_normal
-            Layout.rightMargin: VLCStyle.margin_normal
+            Layout.leftMargin: VLCStyle.margin_xsmall
+            Layout.rightMargin: VLCStyle.margin_xsmall
 
             implicitHeight: visible ? Math.max(mediaTime.implicitHeight, mediaRemainingTime.implicitHeight) : 0
 
@@ -316,8 +316,8 @@ T.Pane {
 
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.leftMargin: VLCStyle.margin_large
-            Layout.rightMargin: VLCStyle.margin_large
+            Layout.leftMargin: VLCStyle.margin_xsmall
+            Layout.rightMargin: VLCStyle.margin_xsmall
 
             identifier: root.identifier
 
