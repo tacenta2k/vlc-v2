@@ -28,7 +28,6 @@
 
 #include "simple_preferences.hpp"
 #include "preferences_widgets.hpp"
-#include "complete_preferences.hpp"
 #include "dialogs/dialogs_provider.hpp"
 #include "maininterface/mainctx.hpp"
 #include "util/accessible_compat_attached.hpp"
@@ -64,6 +63,7 @@
 #include <QDialog>
 #include <QFileDialog>
 #include <QGroupBox>
+#include <QColor>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QRegularExpression>
@@ -893,8 +893,9 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
             configGenericFile<FileConfigControl>( "skins2-last",  ui.skinFileLabel,
                                  ui.fileSkin, ui.skinBrowse );
 
-            // Network metadata access lives in the dedicated Network category.
+            // Privacy and network controls live in their dedicated categories.
             ui.MetadataNetworkAccessMode->hide();
+            ui.groupBox_2->hide();
             configBool( "qt-menubar", ui.menuBarCheck );
 
 
@@ -902,11 +903,8 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
             m_resetters.push_back(std::make_unique<PropertyResetter>(ui.pinVideoControlsCheckbox, "checked"));
             QObject::connect( ui.pinVideoControlsCheckbox, &QtCheckboxChanged, p_intf->p_mi, &MainCtx::setPinVideoControls );
 
-            ui.colorSchemeComboBox->setModel( p_intf->p_mi->getColorScheme() );
-            ui.colorSchemeComboBox->setCurrentText( p_intf->p_mi->getColorScheme()->currentText() );
-            m_resetters.push_back(std::make_unique<PropertyResetter>( ui.colorSchemeComboBox, "currentIndex" ));
-            QObject::connect( ui.colorSchemeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged)
-                              , p_intf->p_mi->getColorScheme(), &ColorSchemeModel::setCurrentIndex );
+            ui.colorSchemeLabel->hide();
+            ui.colorSchemeComboBox->hide();
 
             const double intfScaleFloatFactor = 100;
             const auto updateIntfUserScaleFactorFromControls =
@@ -944,17 +942,9 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
 
             configBool( "qt-titlebar", ui.titleBarCheckBox );
 
-            /* UPDATE options */
-#ifdef UPDATE_CHECK
-            configBool( "qt-updates-notif", ui.updatesBox );
-            configGeneric<IntegerConfigControl>( "qt-updates-days", nullptr, ui.updatesDays );
-            ui.updatesDays->setEnabled( ui.updatesBox->isChecked() );
-            connect( ui.updatesBox, &QCheckBox::toggled,
-                     ui.updatesDays, &QSpinBox::setEnabled );
-#else
+            /* Update controls are available on the General page. */
             ui.updatesBox->hide();
             ui.updatesDays->hide();
-#endif
             /* ONE INSTANCE options */
 #if !defined( _WIN32 ) && !defined(__APPLE__) && !defined(__OS2__)
             if( !module_exists( "dbus" ) )
@@ -991,46 +981,141 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
          ********************************/
         case SPrefsGeneral:
         {
-            if ( !m_nativeModules )
-                m_nativeModules = module_list_get( &m_nativeModuleCount );
+            panel_label->setText( qtr( "General" ) );
 
-            m_nativeConfigTree = new PrefsTree( p_intf, this,
-                                                m_nativeModules, m_nativeModuleCount );
-            m_nativeConfigTree->hide();
+            auto *contentLayout = new QVBoxLayout( panel );
+            contentLayout->setContentsMargins( 0, 0, 0, 0 );
+            contentLayout->setSpacing( 12 );
 
-            PrefsTreeItem *target = nullptr;
-            for ( int i = 0; i < m_nativeConfigTree->topLevelItemCount(); ++i )
+            auto *appearanceGroup = new QGroupBox( qtr( "Appearance" ), panel );
+            auto *appearanceLayout = new QGridLayout( appearanceGroup );
+            appearanceLayout->setColumnStretch( 1, 1 );
+
+            auto *themeLabel = new QLabel( qtr( "Theme" ), appearanceGroup );
+            auto *themeCombo = new QComboBox( appearanceGroup );
+            themeCombo->setModel( p_intf->p_mi->getColorScheme() );
+            themeCombo->setCurrentText( p_intf->p_mi->getColorScheme()->currentText() );
+            themeLabel->setBuddy( themeCombo );
+            appearanceLayout->addWidget( themeLabel, 0, 0 );
+            appearanceLayout->addWidget( themeCombo, 0, 1 );
+            m_resetters.push_back(
+                std::make_unique<PropertyResetter>( themeCombo, "currentIndex" ) );
+            connect( themeCombo, QOverload<int>::of( &QComboBox::currentIndexChanged ),
+                     p_intf->p_mi->getColorScheme(), &ColorSchemeModel::setCurrentIndex );
+
+            auto *accentLabel = new QLabel( qtr( "Accent color" ), appearanceGroup );
+            auto *accentRow = new QWidget( appearanceGroup );
+            auto *accentLayout = new QHBoxLayout( accentRow );
+            accentLayout->setContentsMargins( 0, 0, 0, 0 );
+            accentLayout->setSpacing( 8 );
+            accentLayout->setAlignment( Qt::AlignLeft );
+            appearanceLayout->addWidget( accentLabel, 1, 0 );
+            appearanceLayout->addWidget( accentRow, 1, 1 );
+            accentLabel->setBuddy( accentRow );
+
+            const QList<QPair<QString, QString>> accents {
+                { qtr( "Orange" ), QStringLiteral( "#D37918" ) },
+                { qtr( "Red" ), QStringLiteral( "#E44747" ) },
+                { qtr( "Pink" ), QStringLiteral( "#D94C99" ) },
+                { qtr( "Violet" ), QStringLiteral( "#9A55D8" ) },
+                { qtr( "Indigo" ), QStringLiteral( "#7064E8" ) },
+                { qtr( "Blue" ), QStringLiteral( "#3978DE" ) },
+                { qtr( "Cyan" ), QStringLiteral( "#18A6C5" ) },
+                { qtr( "Green" ), QStringLiteral( "#2EA56D" ) },
+                { qtr( "Olive" ), QStringLiteral( "#9B9D35" ) }
+            };
+
+            const QColor activeAccent = p_intf->p_mi->redesignAccentColor();
+            m_initialAccentColor = activeAccent.name( QColor::HexRgb );
+
+            auto *accentButtonsGroup = new QButtonGroup( accentRow );
+            accentButtonsGroup->setExclusive( true );
+            QList<QToolButton *> accentButtons;
+            for ( int i = 0; i < accents.size(); ++i )
             {
-                PrefsTreeItem *category = m_nativeConfigTree->topLevelItem( i );
-                if ( category->cat_id == CAT_ADVANCED )
-                {
-                    target = category;
-                    break;
-                }
+                const auto &accent = accents.at( i );
+                auto *button = new QToolButton( accentRow );
+                button->setCheckable( true );
+                button->setAutoRaise( true );
+                button->setFixedSize( 28, 28 );
+                button->setAccessibleName( accent.first + qtr( " accent color" ) );
+                button->setToolTip( accent.first );
+                button->setProperty( "accentColor", accent.second );
+                button->setChecked( QColor( accent.second ) == activeAccent );
+                accentButtonsGroup->addButton( button, i );
+                accentButtons.append( button );
+                accentLayout->addWidget( button );
             }
 
-            if ( target )
+            auto setAccentSwatchStyle = []( QToolButton *button ) {
+                const QString color = button->property( "accentColor" ).toString();
+                button->setStyleSheet(
+                    QStringLiteral( "QToolButton { background-color: %1; border: 2px solid #333333; border-radius: 6px; padding: 0px; min-width: 24px; min-height: 24px; } QToolButton:checked { border: 2px solid #F0F0F0; }" )
+                        .arg( color ) );
+            };
+            for ( auto *button : accentButtons )
             {
-                target->name = qtr( "General" );
-                target->help = qtr( "General VLC settings that are not specific to playback, audio, video or the interface." );
-                target->help_html.clear();
-                panel_label->hide();
-                title_line->hide();
-                m_nativeConfigPanel = new AdvPrefsPanel( p_intf, this, target );
-                delete panel;
-                panel = nullptr;
+                setAccentSwatchStyle( button );
+                connect( button, &QToolButton::clicked, this,
+                         [this, button, accentButtons, setAccentSwatchStyle]() {
+                    const QColor selected( button->property( "accentColor" ).toString() );
+                    p_intf->p_mi->setRedesignAccentColor( selected );
+                    for ( auto *swatch : accentButtons )
+                        setAccentSwatchStyle( swatch );
+                } );
             }
-            else
-            {
-                panel_label->setText( qtr( "General" ) );
-                auto *unavailableLayout = new QVBoxLayout( panel );
-                unavailableLayout->setContentsMargins( 0, 0, 0, 0 );
-                auto *unavailableLabel = new QLabel(
-                    qtr( "General native settings are not available in this build." ), panel );
-                unavailableLabel->setWordWrap( true );
-                unavailableLayout->addWidget( unavailableLabel );
-                unavailableLayout->addStretch( 1 );
-            }
+
+            contentLayout->addWidget( appearanceGroup );
+
+            auto *startupGroup = new QGroupBox( qtr( "Startup" ), panel );
+            auto *startupLayout = new QVBoxLayout( startupGroup );
+#ifdef UPDATE_CHECK
+            auto *updatesBox = new QCheckBox(
+                qtr( "Check for updates automatically" ), startupGroup );
+            configBool( "qt-updates-notif", updatesBox );
+            startupLayout->addWidget( updatesBox );
+
+            auto *updatesDaysRow = new QWidget( startupGroup );
+            auto *updatesDaysLayout = new QHBoxLayout( updatesDaysRow );
+            updatesDaysLayout->setContentsMargins( 0, 0, 0, 0 );
+            auto *updatesDaysLabel = new QLabel( qtr( "Check interval" ), updatesDaysRow );
+            auto *updatesDays = new QSpinBox( updatesDaysRow );
+            updatesDaysLabel->setBuddy( updatesDays );
+            configGeneric<IntegerConfigControl>( "qt-updates-days", updatesDaysLabel, updatesDays );
+            updatesDays->setEnabled( updatesBox->isChecked() );
+            connect( updatesBox, &QCheckBox::toggled, updatesDays, &QSpinBox::setEnabled );
+            updatesDaysLayout->addWidget( updatesDaysLabel );
+            updatesDaysLayout->addWidget( updatesDays );
+            updatesDaysLayout->addStretch( 1 );
+            startupLayout->addWidget( updatesDaysRow );
+#else
+            auto *updatesUnavailable = new QLabel(
+                qtr( "Automatic update checks are not enabled in this build." ), startupGroup );
+            updatesUnavailable->setWordWrap( true );
+            startupLayout->addWidget( updatesUnavailable );
+#endif
+            contentLayout->addWidget( startupGroup );
+
+            auto *diagnosticsGroup = new QGroupBox( qtr( "Diagnostics" ), panel );
+            auto *diagnosticsLayout = new QVBoxLayout( diagnosticsGroup );
+            auto *diagnosticsDescription = new QLabel(
+                qtr( "View application messages and export the current log to a file." ),
+                diagnosticsGroup );
+            diagnosticsDescription->setWordWrap( true );
+            diagnosticsLayout->addWidget( diagnosticsDescription );
+            auto *logsButton = new QPushButton( qtr( "View logs and export…" ), diagnosticsGroup );
+            diagnosticsLayout->addWidget( logsButton );
+            auto *dialogsProvider = DialogsProvider::getInstance( p_intf );
+            connect( logsButton, &QPushButton::clicked, this,
+                     [dialogsProvider]() { dialogsProvider->messagesDialog( 0 ); } );
+            contentLayout->addWidget( diagnosticsGroup );
+
+            auto *advancedButton = new QPushButton( qtr( "Advanced options" ), panel );
+            advancedButton->setObjectName( "settingsAdvancedButton" );
+            connect( advancedButton, &QPushButton::clicked,
+                     this, &SPrefsPanel::advancedSettingsRequested );
+            contentLayout->addWidget( advancedButton, 0, Qt::AlignLeft );
+            contentLayout->addStretch( 1 );
             break;
         }
 
@@ -1450,17 +1535,6 @@ SPrefsPanel::~SPrefsPanel()
     qDeleteAll( controls );
     controls.clear();
 
-    delete m_nativeConfigPanel;
-    m_nativeConfigPanel = nullptr;
-    delete m_nativeConfigTree;
-    m_nativeConfigTree = nullptr;
-    if ( m_nativeModules )
-    {
-        module_list_free( m_nativeModules );
-        m_nativeModules = nullptr;
-        m_nativeModuleCount = 0;
-    }
-
     free( lang );
 }
 
@@ -1536,9 +1610,6 @@ void SPrefsPanel::apply()
         ConfigControl *c = qobject_cast<ConfigControl *>(*i);
         c->doApply();
     }
-
-    if ( m_nativeConfigPanel )
-        m_nativeConfigPanel->apply();
 
     switch( number )
     {
@@ -1681,6 +1752,12 @@ void SPrefsPanel::clean()
 {
     for ( auto &resetter : m_resetters )
         resetter->reset();
+
+    if ( number == SPrefsGeneral && !m_initialAccentColor.isEmpty() )
+    {
+        p_intf->p_mi->setRedesignAccentColor( QColor( m_initialAccentColor ) );
+        m_initialAccentColor.clear();
+    }
 }
 
 void SPrefsPanel::lastfm_Changed( int i_state )
