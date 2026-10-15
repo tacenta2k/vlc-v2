@@ -28,6 +28,7 @@
 #endif
 
 #include <vlc_common.h>
+#include <vlc_modules.h>
 
 /* Auto-generated from .ui files */
 #include "ui_sprefs_input.h"

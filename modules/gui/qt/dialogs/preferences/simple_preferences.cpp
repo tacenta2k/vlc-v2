@@ -47,6 +47,7 @@
 #include <QSignalMapper>
 #include <QVBoxLayout>
 #include <QScrollArea>
+#include <QFrame>
 #include <QLineEdit>
 
 #include <QStyleFactory>
