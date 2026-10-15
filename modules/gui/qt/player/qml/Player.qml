@@ -1294,7 +1294,7 @@ FocusScope {
 
         rightPadding: VLCStyle.applicationHorizontalMargin
         leftPadding: VLCStyle.applicationHorizontalMargin
-        bottomPadding: VLCStyle.applicationVerticalMargin + VLCStyle.margin_xsmall
+        bottomPadding: VLCStyle.margin_xxxsmall
 
         // The redesign keeps elapsed/remaining time on the same line as the seek bar.
         textPosition: ControlBar.TimeTextPosition.LeftRightSlider
