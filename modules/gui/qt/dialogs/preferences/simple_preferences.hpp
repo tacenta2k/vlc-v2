@@ -60,9 +60,15 @@ enum {
     SPrefsInputAndCodecs,
     SPrefsHotkeys,
     SPrefsMediaLibrary,
+    SPrefsGeneral,
+    SPrefsPrivacy,
+    SPrefsNetwork,
+    SPrefsPerformance,
+    SPrefsRecording,
+    SPrefsExtensions,
     SPrefsMax
 };
-#define SPrefsDefaultCat SPrefsInterface
+#define SPrefsDefaultCat SPrefsGeneral
 
 enum {
     CachingCustom = 0,
@@ -74,6 +80,8 @@ enum {
 };
 
 class ConfigControl;
+class PrefsTree;
+class AdvPrefsPanel;
 
 #ifdef _WIN32
 class QTreeWidgetItem;
@@ -90,8 +98,10 @@ private:
     QLineEdit *categorySearch {};
     QLabel *appSectionLabel {};
     QLabel *mediaSectionLabel {};
+    QLabel *systemSectionLabel {};
     QList<QToolButton *> appCategoryButtons;
     QList<QToolButton *> mediaCategoryButtons;
+    QList<QToolButton *> systemCategoryButtons;
 
     void filterCategories( const QString &text );
 signals:
@@ -166,6 +176,12 @@ private:
     Ui::SPrefsInputAndCodecs m_inputCodecUI;
     Ui::SPrefsSubtitles m_subtitlesUI;
     Ui::SPrefsMediaLibrary m_medialibUI;
+
+    // Lazily created native advanced-config pages shown inside the redesigned shell.
+    PrefsTree *m_nativeConfigTree {};
+    AdvPrefsPanel *m_nativeConfigPanel {};
+    module_t **m_nativeModules {};
+    size_t m_nativeModuleCount {};
 
 /* Display only the options for the selected audio output */
 private slots:

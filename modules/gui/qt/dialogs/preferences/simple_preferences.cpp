@@ -28,6 +28,7 @@
 
 #include "simple_preferences.hpp"
 #include "preferences_widgets.hpp"
+#include "complete_preferences.hpp"
 #include "dialogs/dialogs_provider.hpp"
 #include "maininterface/mainctx.hpp"
 #include "util/accessible_compat_attached.hpp"
@@ -61,6 +62,7 @@
 #include <QHBoxLayout>
 #include <QDialog>
 #include <QFileDialog>
+#include <QGroupBox>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QRegularExpression>
@@ -236,7 +238,13 @@ SPrefsCatList::SPrefsCatList( qt_intf_t *_p_intf, QWidget *_parent ) :
     categorySearch->setAccessibleName( qtr( "Search settings categories" ) );
     layout->addWidget( categorySearch );
 
-    auto *categoryList = new QWidget( this );
+    auto *categoryScroll = new QScrollArea( this );
+    categoryScroll->setObjectName( "settingsCategoryScroll" );
+    categoryScroll->setWidgetResizable( true );
+    categoryScroll->setFrameShape( QFrame::NoFrame );
+    categoryScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
+
+    auto *categoryList = new QWidget( categoryScroll );
     auto *categoryLayout = new QVBoxLayout( categoryList );
     categoryLayout->setContentsMargins( 0, 0, 0, 0 );
     categoryLayout->setSpacing( 2 );
@@ -250,6 +258,7 @@ SPrefsCatList::SPrefsCatList( qt_intf_t *_p_intf, QWidget *_parent ) :
 
     appSectionLabel = addSectionLabel( qtr( "App" ) );
     mediaSectionLabel = nullptr;
+    systemSectionLabel = nullptr;
 
     /*
      * Use auto-exclusive buttons and a mapper as QButtonGroup cannot set focus
@@ -261,7 +270,7 @@ SPrefsCatList::SPrefsCatList( qt_intf_t *_p_intf, QWidget *_parent ) :
 
     qreal dpr = devicePixelRatioF();
     auto addCategory = [&]( const QString &label, const QString &ltooltip,
-                            const QString &icon, int numb, bool appCategory ) {
+                            const QString &icon, int numb, int categoryGroup ) {
         auto *button = new QToolButton( categoryList );
         QPixmap scaled = QPixmap( icon ).scaled(
             QSize( qRound( 20 * dpr ), qRound( 20 * dpr ) ),
@@ -287,37 +296,54 @@ SPrefsCatList::SPrefsCatList( qt_intf_t *_p_intf, QWidget *_parent ) :
         mapper->setMapping( button, numb );
         categoryLayout->addWidget( button );
 
-        if ( appCategory )
+        if ( categoryGroup == 0 )
             appCategoryButtons.append( button );
-        else
+        else if ( categoryGroup == 1 )
             mediaCategoryButtons.append( button );
+        else
+            systemCategoryButtons.append( button );
 
         return button;
     };
 
-    auto *interfaceButton = addCategory(
-        qtr( "Interface" ), qfut( INTF_TOOLTIP ),
-        ":/prefsmenu/spref_interface.png", SPrefsInterface, true );
+    auto *generalButton = addCategory(
+        qtr( "General" ), qtr( "General application settings" ),
+        ":/prefsmenu/spref_interface.png", SPrefsGeneral, 0 );
+    addCategory( qtr( "Interface" ), qfut( INTF_TOOLTIP ),
+                 ":/prefsmenu/spref_interface.png", SPrefsInterface, 0 );
+    addCategory( qtr( "Privacy" ), qtr( "History and privacy settings" ),
+                 ":/prefsmenu/spref_interface.png", SPrefsPrivacy, 0 );
     addCategory( qtr( "Controls" ), qfut( HOTKEYS_TOOLTIP ),
-                 ":/prefsmenu/spref_hotkeys.png", SPrefsHotkeys, true );
+                 ":/prefsmenu/spref_hotkeys.png", SPrefsHotkeys, 0 );
 
     mediaSectionLabel = addSectionLabel( qtr( "Media" ) );
     addCategory( qtr( "Playback" ), qfut( INPUT_TOOLTIP ),
-                 ":/prefsmenu/spref_input.png", SPrefsInputAndCodecs, false );
+                 ":/prefsmenu/spref_input.png", SPrefsInputAndCodecs, 1 );
     addCategory( qtr( "Video" ), qfut( VIDEO_TOOLTIP ),
-                 ":/prefsmenu/spref_video.png", SPrefsVideo, false );
+                 ":/prefsmenu/spref_video.png", SPrefsVideo, 1 );
     addCategory( qtr( "Audio" ), qfut( AUDIO_TOOLTIP ),
-                 ":/prefsmenu/spref_audio.png", SPrefsAudio, false );
+                 ":/prefsmenu/spref_audio.png", SPrefsAudio, 1 );
     addCategory( qtr( "Subtitles" ), qfut( SUBPIC_TOOLTIP ),
-                 ":/prefsmenu/spref_subtitles.png", SPrefsSubtitles, false );
+                 ":/prefsmenu/spref_subtitles.png", SPrefsSubtitles, 1 );
     if ( vlc_ml_instance_get( p_intf ) != nullptr )
         addCategory( qtr( "Library" ), qfut( ML_TOOLTIP ),
-                     ":/prefsmenu/spref_medialibrary.png", SPrefsMediaLibrary, false );
+                     ":/prefsmenu/spref_medialibrary.png", SPrefsMediaLibrary, 1 );
+
+    systemSectionLabel = addSectionLabel( qtr( "System" ) );
+    addCategory( qtr( "Network" ), qtr( "Network preferences" ),
+                 ":/prefsmenu/spref_input.png", SPrefsNetwork, 2 );
+    addCategory( qtr( "Performance" ), qtr( "Performance and decoding preferences" ),
+                 ":/prefsmenu/spref_input.png", SPrefsPerformance, 2 );
+    addCategory( qtr( "Recording" ), qtr( "Recording output preferences" ),
+                 ":/prefsmenu/spref_input.png", SPrefsRecording, 2 );
+    addCategory( qtr( "Extensions" ), qtr( "Manage VLC extensions" ),
+                 ":/prefsmenu/spref_interface.png", SPrefsExtensions, 2 );
 
     categoryLayout->addStretch( 1 );
-    layout->addWidget( categoryList, 1 );
+    categoryScroll->setWidget( categoryList );
+    layout->addWidget( categoryScroll, 1 );
 
-    interfaceButton->setChecked( true );
+    generalButton->setChecked( true );
 
     connect( categorySearch, &QLineEdit::textChanged,
              this, &SPrefsCatList::filterCategories );
@@ -347,11 +373,14 @@ void SPrefsCatList::filterCategories( const QString &text )
 
     const bool appVisible = filterGroup( appCategoryButtons );
     const bool mediaVisible = filterGroup( mediaCategoryButtons );
+    const bool systemVisible = filterGroup( systemCategoryButtons );
 
     if ( appSectionLabel )
         appSectionLabel->setVisible( appVisible );
     if ( mediaSectionLabel )
         mediaSectionLabel->setVisible( mediaVisible );
+    if ( systemSectionLabel )
+        systemSectionLabel->setVisible( systemVisible );
 }
 
 /*********************************************************************
@@ -464,7 +493,7 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
         {
             auto& ui = m_videoUI;
             ui.setupUi( panel );
-            panel_label->setText( qtr("Video Settings") );
+            panel_label->setText( qtr("Video") );
 
             configBool( "video", ui.enableVideo );
             ui.videoZone->setEnabled( ui.enableVideo->isChecked() );
@@ -526,7 +555,7 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
         {
             auto& ui = m_audioUI;
             ui.setupUi( panel );
-            panel_label->setText( qtr("Audio Settings") );
+            panel_label->setText( qtr("Audio") );
 
             configBool( "audio", ui.enableAudio );
             ui.audioZone->setEnabled( ui.enableAudio->isChecked() );
@@ -684,7 +713,7 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
         {
             auto& ui = m_inputCodecUI;
             ui.setupUi( panel );
-            panel_label->setText( qtr("Input & Codecs Settings") );
+            panel_label->setText( qtr("Playback") );
 
             /* Disk Devices */
             {
@@ -778,7 +807,7 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
         {
             auto& ui = m_interfaceUI;
             ui.setupUi( panel );
-            panel_label->setText( qtr("Interface Settings") );
+            panel_label->setText( qtr("Interface") );
 
 #ifndef _WIN32
             ui.langBox->hide();
@@ -983,27 +1012,205 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
 
             configGeneric<IntegerListConfigControl>( "qt-auto-raise", ui.autoRaiseLabel, ui.autoRaiseComboBox );
 
-            /* RECENTLY PLAYED options */
-
-            const auto hasMedialibrary = p_intf->p_mi->hasMediaLibrary();
-
-            ui.continuePlaybackLabel->setVisible( hasMedialibrary );
-            ui.continuePlaybackComboBox->setVisible( hasMedialibrary );
-            ui.saveRecentlyPlayed->setVisible( hasMedialibrary );
-            ui.clearRecent->setVisible( hasMedialibrary );
+            /* History controls are presented in the dedicated Privacy category. */
+            ui.continuePlaybackLabel->hide();
+            ui.continuePlaybackComboBox->hide();
+            ui.saveRecentlyPlayed->hide();
+            ui.clearRecent->hide();
             ui.clearRecentSpacer->changeSize( 0, 0 );
 
-            if ( hasMedialibrary )
-            {
-                configGeneric<IntegerListConfigControl>( "restore-playback-pos", ui.continuePlaybackLabel, ui.continuePlaybackComboBox );
-                configBool( "save-recentplay", ui.saveRecentlyPlayed );
+            break;
+        }
 
-                ui.clearRecentSpacer->changeSize( 1, 1, QSizePolicy::Expanding, QSizePolicy::Minimum );
-                MLRecentMediaModel *recentsModel = new MLRecentMediaModel( ui.clearRecent );
-                recentsModel->setMl( p_intf->p_mi->getMediaLibrary() );
-                connect( ui.clearRecent, &QPushButton::clicked, recentsModel, &MLRecentMediaModel::clearHistory );
+        /********************************
+         * GENERAL / NETWORK / PERFORMANCE
+         ********************************/
+        case SPrefsGeneral:
+        case SPrefsNetwork:
+        case SPrefsPerformance:
+        {
+            if ( !m_nativeModules )
+                m_nativeModules = module_list_get( &m_nativeModuleCount );
+
+            m_nativeConfigTree = new PrefsTree( p_intf, this,
+                                                m_nativeModules, m_nativeModuleCount );
+            m_nativeConfigTree->hide();
+
+            PrefsTreeItem *target = nullptr;
+            for ( int i = 0; i < m_nativeConfigTree->topLevelItemCount(); ++i )
+            {
+                PrefsTreeItem *category = m_nativeConfigTree->topLevelItem( i );
+                if ( number == SPrefsGeneral && category->cat_id == CAT_INTERFACE )
+                    target = category;
+                else if ( number == SPrefsPerformance && category->cat_id == CAT_INPUT )
+                    target = category;
+                else if ( number == SPrefsNetwork && category->cat_id == CAT_ADVANCED )
+                {
+                    for ( int j = 0; j < category->childCount(); ++j )
+                    {
+                        PrefsTreeItem *subcategory = category->child( j );
+                        if ( subcategory->subcat_id == SUBCAT_ADVANCED_NETWORK )
+                        {
+                            target = subcategory;
+                            break;
+                        }
+                    }
+                }
+                if ( target )
+                    break;
             }
 
+            if ( target )
+            {
+                if ( number == SPrefsGeneral )
+                {
+                    target->name = qtr( "General" );
+                    target->help = qtr( "General application and interface preferences." );
+                    panel_label->setText( qtr( "General" ) );
+                }
+                else if ( number == SPrefsNetwork )
+                {
+                    target->name = qtr( "Network" );
+                    target->help = qtr( "Configure VLC's network-related preferences." );
+                    panel_label->setText( qtr( "Network" ) );
+                }
+                else
+                {
+                    target->name = qtr( "Performance" );
+                    target->help = qtr( "Configure decoding, input and performance-related preferences." );
+                    panel_label->setText( qtr( "Performance" ) );
+                }
+
+                target->help_html.clear();
+                m_nativeConfigPanel = new AdvPrefsPanel( p_intf, this, target );
+                panel_label->hide();
+                title_line->hide();
+                delete panel;
+                panel = nullptr;
+                break;
+            }
+
+            panel_label->setText( qtr( "Settings unavailable" ) );
+            auto *unavailableLayout = new QVBoxLayout( panel );
+            unavailableLayout->setContentsMargins( 0, 0, 0, 0 );
+            auto *unavailableLabel = new QLabel(
+                qtr( "The native settings for this category are not available in this build." ), panel );
+            unavailableLabel->setWordWrap( true );
+            unavailableLayout->addWidget( unavailableLabel );
+            unavailableLayout->addStretch( 1 );
+            break;
+        }
+
+        /********************************
+         * PRIVACY SETTINGS
+         ********************************/
+        case SPrefsPrivacy:
+        {
+            panel_label->setText( qtr( "Privacy" ) );
+
+            auto *contentLayout = new QVBoxLayout( panel );
+            contentLayout->setContentsMargins( 0, 0, 0, 0 );
+            contentLayout->setSpacing( 12 );
+
+            auto *historyGroup = new QGroupBox( qtr( "Recently played" ), panel );
+            auto *historyLayout = new QVBoxLayout( historyGroup );
+            auto *historyDescription = new QLabel(
+                qtr( "Choose whether VLC stores recently played items on this device." ),
+                historyGroup );
+            historyDescription->setWordWrap( true );
+            historyLayout->addWidget( historyDescription );
+
+            auto *saveRecent = new QCheckBox( qtr( "Save recently played items" ), historyGroup );
+            const bool hasMediaLibrary = p_intf->p_mi->hasMediaLibrary();
+            saveRecent->setVisible( hasMediaLibrary );
+            configBool( "save-recentplay", saveRecent );
+            historyLayout->addWidget( saveRecent );
+
+            auto *clearRecent = new QPushButton( qtr( "Clear history" ), historyGroup );
+            clearRecent->setEnabled( hasMediaLibrary );
+            historyLayout->addWidget( clearRecent );
+
+            if ( hasMediaLibrary )
+            {
+                auto *recentModel = new MLRecentMediaModel( clearRecent );
+                recentModel->setMl( p_intf->p_mi->getMediaLibrary() );
+                connect( clearRecent, &QPushButton::clicked,
+                         recentModel, &MLRecentMediaModel::clearHistory );
+            }
+            else
+            {
+                historyDescription->setText(
+                    qtr( "History controls require VLC's media library, which is not available in this build." ) );
+            }
+
+            contentLayout->addWidget( historyGroup );
+            contentLayout->addStretch( 1 );
+            break;
+        }
+
+        /********************************
+         * RECORDING SETTINGS
+         ********************************/
+        case SPrefsRecording:
+        {
+            panel_label->setText( qtr( "Recording" ) );
+
+            auto *contentLayout = new QVBoxLayout( panel );
+            contentLayout->setContentsMargins( 0, 0, 0, 0 );
+            contentLayout->setSpacing( 12 );
+
+            auto *recordingGroup = new QGroupBox( qtr( "Recording output" ), panel );
+            auto *recordingLayout = new QGridLayout( recordingGroup );
+            auto *recordPathLabel = new QLabel( qtr( "Recording directory or filename" ),
+                                                recordingGroup );
+            auto *recordPath = new QLineEdit( recordingGroup );
+            auto *recordBrowse = new QPushButton( qtr( "Browse..." ), recordingGroup );
+            recordPathLabel->setBuddy( recordPath );
+            recordingLayout->addWidget( recordPathLabel, 0, 0 );
+            recordingLayout->addWidget( recordPath, 0, 1 );
+            recordingLayout->addWidget( recordBrowse, 0, 2 );
+            configGenericFile<DirectoryConfigControl>( "input-record-path",
+                                                       recordPathLabel, recordPath, recordBrowse );
+
+            auto *recordHint = new QLabel(
+                qtr( "This location is used by VLC when recording the current stream." ),
+                recordingGroup );
+            recordHint->setWordWrap( true );
+            recordingLayout->addWidget( recordHint, 1, 0, 1, 3 );
+
+            contentLayout->addWidget( recordingGroup );
+            contentLayout->addStretch( 1 );
+            break;
+        }
+
+        /********************************
+         * EXTENSIONS SETTINGS
+         ********************************/
+        case SPrefsExtensions:
+        {
+            panel_label->setText( qtr( "Extensions" ) );
+
+            auto *contentLayout = new QVBoxLayout( panel );
+            contentLayout->setContentsMargins( 0, 0, 0, 0 );
+            contentLayout->setSpacing( 12 );
+
+            auto *extensionsGroup = new QGroupBox( qtr( "VLC extensions" ), panel );
+            auto *extensionsLayout = new QVBoxLayout( extensionsGroup );
+            auto *extensionsDescription = new QLabel(
+                qtr( "Open the native extension manager to view and manage VLC add-ons." ),
+                extensionsGroup );
+            extensionsDescription->setWordWrap( true );
+            extensionsLayout->addWidget( extensionsDescription );
+
+            auto *manageExtensions = new QPushButton( qtr( "Manage extensions" ),
+                                                       extensionsGroup );
+            extensionsLayout->addWidget( manageExtensions );
+            auto *provider = DialogsProvider::getInstance( p_intf );
+            connect( manageExtensions, &QPushButton::clicked,
+                     provider, &DialogsProvider::pluginDialog );
+
+            contentLayout->addWidget( extensionsGroup );
+            contentLayout->addStretch( 1 );
             break;
         }
 
@@ -1014,7 +1221,7 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
         {
             auto& ui = m_subtitlesUI;
             ui.setupUi( panel );
-            panel_label->setText( qtr("Subtitle & On Screen Display Settings") );
+            panel_label->setText( qtr("Subtitles") );
 
             configBool( "osd", ui.OSDBox);
             configBool( "video-title-show", ui.OSDTitleBox);
@@ -1068,7 +1275,7 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
             panel->setLayout( gLayout );
             int line = 0;
 
-            panel_label->setText( qtr( "Configure Hotkeys" ) );
+            panel_label->setText( qtr( "Controls" ) );
             control = new KeySelectorControl( this );
             control->insertInto( gLayout, line );
             controls.append( control );
@@ -1105,7 +1312,7 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
         {
             auto& ui = m_medialibUI;
             ui.setupUi( panel );
-            panel_label->setText( qtr("Media Library Settings") );
+            panel_label->setText( qtr("Library") );
 
             if ( vlc_ml_instance_get( p_intf ) != NULL )
             {
@@ -1135,14 +1342,21 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
         }
     }
 
-    panel_layout->addWidget( panel_label );
-    panel_layout->addWidget( title_line );
+    if ( m_nativeConfigPanel )
+    {
+        panel_layout->addWidget( m_nativeConfigPanel );
+    }
+    else
+    {
+        panel_layout->addWidget( panel_label );
+        panel_layout->addWidget( title_line );
 
-    QScrollArea *scroller= new QScrollArea;
-    scroller->setWidget( panel );
-    scroller->setWidgetResizable( true );
-    scroller->setFrameStyle( QFrame::NoFrame );
-    panel_layout->addWidget( scroller );
+        QScrollArea *scroller = new QScrollArea;
+        scroller->setWidget( panel );
+        scroller->setWidgetResizable( true );
+        scroller->setFrameStyle( QFrame::NoFrame );
+        panel_layout->addWidget( scroller );
+    }
 
     setLayout( panel_layout );
 }
@@ -1201,7 +1415,20 @@ SPrefsPanel::~SPrefsPanel()
     if (!m_isApplied)
         clean();
 
-    qDeleteAll( controls ); controls.clear();
+    qDeleteAll( controls );
+    controls.clear();
+
+    delete m_nativeConfigPanel;
+    m_nativeConfigPanel = nullptr;
+    delete m_nativeConfigTree;
+    m_nativeConfigTree = nullptr;
+    if ( m_nativeModules )
+    {
+        module_list_free( m_nativeModules );
+        m_nativeModules = nullptr;
+        m_nativeModuleCount = 0;
+    }
+
     free( lang );
 }
 
@@ -1277,6 +1504,9 @@ void SPrefsPanel::apply()
         ConfigControl *c = qobject_cast<ConfigControl *>(*i);
         c->doApply();
     }
+
+    if ( m_nativeConfigPanel )
+        m_nativeConfigPanel->apply();
 
     switch( number )
     {
