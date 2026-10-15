@@ -144,8 +144,8 @@ T.Page {
 
         position: T.ToolBar.Header
 
-        topPadding: VLCStyle.layoutTitle_top_padding
-        bottomPadding: VLCStyle.layoutTitle_bottom_padding
+        topPadding: VLCStyle.margin_xsmall
+        bottomPadding: VLCStyle.margin_xsmall
 
         // FIXME: `GridItem`'s background extends beyond its
         //        bounding rect, violating the hypothetical
@@ -169,7 +169,15 @@ T.Page {
         }
 
         background: Rectangle {
-            color: theme.bg.primary
+            color: VLCStyle.libraryBackground
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: VLCStyle.border
+                color: VLCStyle.libraryDivider
+            }
         }
 
         RowLayout {
@@ -182,7 +190,9 @@ T.Page {
 
                 Layout.fillWidth: true
 
-                color: theme.fg.primary
+                color: VLCStyle.libraryTextPrimary
+                font.pixelSize: VLCStyle.fontSize_large
+                font.weight: Font.Normal
             }
 
             GridSortFilterControls {

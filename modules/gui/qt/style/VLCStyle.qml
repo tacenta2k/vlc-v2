@@ -57,6 +57,16 @@ QtObject {
     readonly property color playerForeground: "#969696"
     readonly property color playerMutedForeground: "#6B6B6B"
 
+    // Figma VLC redesign: application shell and media-library palette.
+    readonly property color libraryBackground: "#0E0E0E"
+    readonly property color librarySidebarBackground: "#191919"
+    readonly property color libraryTextPrimary: "#8F8F8F"
+    readonly property color libraryTextSecondary: "#6B6B6B"
+    readonly property color libraryTextActive: "#E5E5E5"
+    readonly property color libraryDivider: "#222222"
+    readonly property color libraryNavSelected: "#242424"
+    readonly property int libraryGridHorizontalSpacing: MainCtx.dp(20, scale)
+
     readonly property real highPixelDensityThreshold: 5.9 // 150 dpi (dpmm)
 
     // Sizes
@@ -159,7 +169,7 @@ QtObject {
     readonly property int closedWidthPlaylist: MainCtx.dp(20, scale);
 
     readonly property int expandNavigationPaneWidth: MainCtx.dp(160, scale);
-    readonly property int buttonHeightNavigationPane: MainCtx.dp(35, scale);
+    readonly property int buttonHeightNavigationPane: MainCtx.dp(40, scale);
 
     readonly property int widthSearchInput: MainCtx.dp(200, scale);
     readonly property int widthSortBox: MainCtx.dp(150, scale);
@@ -213,7 +223,7 @@ QtObject {
     readonly property int gridCover_video_height: ( gridCover_video_width * 10.0 ) / 16
     readonly property int gridCover_video_border: MainCtx.dp(4, scale)
 
-    readonly property int gridCover_radius: MainCtx.dp(4, scale)
+    readonly property int gridCover_radius: MainCtx.dp(8, scale)
 
     readonly property int expandCover_music_height: MainCtx.dp(171, scale)
     readonly property int expandCover_music_width: MainCtx.dp(171, scale)

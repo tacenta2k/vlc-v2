@@ -316,7 +316,7 @@ FocusScope {
             implicitWidth: stackView.implicitWidth
             implicitHeight: stackView.implicitHeight
 
-            color: theme.bg.primary
+            color: VLCStyle.libraryBackground
 
             layer.enabled: MainCtx.backdropBlurRequested() &&
                            (GraphicsInfo.shaderType === GraphicsInfo.RhiShader) &&

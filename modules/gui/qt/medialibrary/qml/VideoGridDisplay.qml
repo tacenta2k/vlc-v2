@@ -44,6 +44,7 @@ Widgets.ExpandGridItemView {
 
     basePictureWidth: VLCStyle.gridCover_video_width
     basePictureHeight: VLCStyle.gridCover_video_height
+    horizontalSpacing: VLCStyle.libraryGridHorizontalSpacing
 
     activeFocusOnTab: true
 

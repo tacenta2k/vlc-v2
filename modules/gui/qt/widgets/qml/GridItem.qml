@@ -270,7 +270,7 @@ T.ItemDelegate {
         enabled: theme.initialized
 
         //don't show the backgroud unless selected
-        color: root.selected ?  theme.bg.highlight : theme.bg.primary
+        color: root.selected ? VLCStyle.libraryNavSelected : VLCStyle.libraryBackground
         border.color: visualFocus ? theme.visualFocus : Qt.alpha(theme.visualFocus, 0.0)
     }
 
@@ -358,8 +358,8 @@ T.ItemDelegate {
 
                 height: implicitHeight
                 color: root.selected
-                    ? theme.fg.highlight
-                    : theme.fg.primary
+                    ? VLCStyle.libraryTextActive
+                    : VLCStyle.libraryTextPrimary
             }
         }
 
@@ -370,8 +370,8 @@ T.ItemDelegate {
             text: root.subtitle
             elide: Text.ElideRight
             color: root.selected
-                ? theme.fg.highlight
-                : theme.fg.secondary
+                ? VLCStyle.libraryTextActive
+                : VLCStyle.libraryTextSecondary
 
             Layout.preferredWidth: Math.min(root.width, implicitWidth)
             Layout.alignment: root.textAlignHCenter ? Qt.AlignCenter : Qt.AlignLeft

@@ -35,7 +35,7 @@ T.ItemDelegate {
 
     property bool showText: true
 
-    property real radius: VLCStyle.button_radius
+    property real radius: VLCStyle.dp(6, VLCStyle.scale)
 
     // Settings
 
@@ -99,7 +99,8 @@ T.ItemDelegate {
 
     background: Widgets.AnimatedBackground {
         enabled: theme.initialized
-        color: theme.bg.primary
+        color: control.checked ? VLCStyle.libraryNavSelected
+                               : (control.hovered ? VLCStyle.libraryDivider : "transparent")
         border.color: visualFocus ? theme.visualFocus : "transparent"
 
         radius: control.radius
@@ -111,7 +112,7 @@ T.ItemDelegate {
                 verticalCenter: parent.verticalCenter
             }
             implicitHeight: parent.height / 2
-            visible: control.checked
+            visible: false
 
             radius: control.radius / 2
         }
@@ -121,7 +122,7 @@ T.ItemDelegate {
         spacing: VLCStyle.margin_xsmall
 
         Item {
-            Layout.preferredWidth: VLCStyle.icon_banner
+            Layout.preferredWidth: VLCStyle.icon_normal
             Layout.fillHeight: true
 
             Widgets.IconLabel {
@@ -136,9 +137,10 @@ T.ItemDelegate {
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
 
-                color: (control.highlighted || control.checked) ? theme.accent : theme.fg.primary
+                color: (control.highlighted || control.checked || control.hovered)
+                       ? VLCStyle.libraryTextActive : VLCStyle.libraryTextPrimary
 
-                font.pixelSize: VLCStyle.icon_banner
+                font.pixelSize: VLCStyle.icon_normal
             }
         }
 
@@ -152,13 +154,13 @@ T.ItemDelegate {
 
             verticalAlignment: Text.AlignVCenter
 
-            color: control.checked ? theme.fg.secondary : theme.fg.primary
+            color: control.checked ? VLCStyle.libraryTextActive : VLCStyle.libraryTextPrimary
 
             elide: Text.ElideRight
 
             visible: control.showText
 
-            font.pixelSize: VLCStyle.fontSize_normal
+            font.pixelSize: VLCStyle.fontSize_large
 
             font.weight: control.checked ? Font.DemiBold : Font.Normal
 

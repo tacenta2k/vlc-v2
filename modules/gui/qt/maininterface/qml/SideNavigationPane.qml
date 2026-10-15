@@ -90,7 +90,7 @@ T.Pane {
 
     background: Widgets.AcrylicBackground {
         enabled: root.useAcrylic
-        tintColor: theme.bg.primary
+        tintColor: VLCStyle.librarySidebarBackground
     }
 
     contentItem:  Item {
