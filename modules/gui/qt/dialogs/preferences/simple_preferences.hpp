@@ -47,6 +47,7 @@ class MLFoldersEditor;
 #include <QWidget>
 #include <QList>
 class QLineEdit;
+class QComboBox;
 class QToolButton;
 class QLabel;
 class QPushButton;
@@ -183,6 +184,7 @@ private:
     AdvPrefsPanel *m_nativeConfigPanel {};
     module_t **m_nativeModules {};
     size_t m_nativeModuleCount {};
+    QComboBox *m_networkCachingCombo {};
 
 /* Display only the options for the selected audio output */
 private slots:

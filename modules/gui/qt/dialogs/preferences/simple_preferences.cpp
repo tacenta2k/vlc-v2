@@ -750,53 +750,15 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
 #endif
             configGeneric<StringConfigControl>( "dvd", ui.DVDLabel,
                             ui.DVDDeviceComboBox->lineEdit() );
-            configGenericFile<DirectoryConfigControl>( "input-record-path",  ui.recordLabel,
-                                 ui.recordPath, ui.recordBrowse );
-
-            configGeneric<StringConfigControl>( "http-proxy", ui.httpProxyLabel, ui.proxy );
-            configGeneric<IntegerConfigControl>( "postproc-q", ui.ppLabel, ui.PostProcLevel );
             configGeneric<IntegerListConfigControl>( "avi-index", ui.aviLabel, ui.AviRepair );
-
-            /* live555 module prefs */
-            configBool( "rtsp-tcp", ui.live555TransportRTSP_TCPRadio );
-            if ( !module_exists( "live555" ) )
-            {
-                ui.live555TransportRTSP_TCPRadio->hide();
-                ui.live555TransportHTTPRadio->hide();
-                ui.live555TransportLabel->hide();
-            }
-            configGeneric<StringListConfigControl>( "dec-dev", ui.hwAccelLabel, ui.hwAccelModule );
-            configBool( "input-fast-seek", ui.fastSeekBox );
-            configGeneric<IntegerListConfigControl>( "avcodec-skiploopfilter", ui.filterLabel, ui.loopFilterBox );
-            configGeneric<StringListConfigControl>( "sout-x264-tune", ui.x264Label, ui.tuneBox );
-            configGeneric<StringListConfigControl>( "sout-x264-preset", ui.x264Label, ui.presetBox );
-            configGeneric<StringListConfigControl>( "sout-x264-profile", ui.x264profileLabel, ui.profileBox );
-            configGeneric<StringConfigControl>( "sout-x264-level", ui.x264profileLabel, ui.levelBox );
             configBool( "mkv-preload-local-dir", ui.mkvPreloadBox );
 
-            /* Caching */
-            /* Add the things to the ComboBox */
-            ui.cachingCombo->addItem( qtr("Custom"), QVariant( CachingCustom ) );
-            ui.cachingCombo->addItem( qtr("Lowest latency"), QVariant( CachingLowest ) );
-            ui.cachingCombo->addItem( qtr("Low latency"), QVariant( CachingLow ) );
-            ui.cachingCombo->addItem( qtr("Normal"), QVariant( CachingNormal ) );
-            ui.cachingCombo->addItem( qtr("High latency"), QVariant( CachingHigh ) );
-            ui.cachingCombo->addItem( qtr("Higher latency"), QVariant( CachingHigher ) );
-
-#define TestCaC( name, factor ) \
-    b_cache_equal =  b_cache_equal && \
-     ( i_cache * factor == config_GetInt( name ) );
-            /* Select the accurate value of the ComboBox */
-            bool b_cache_equal = true;
-            int i_cache = config_GetInt( "file-caching" );
-
-            TestCaC( "network-caching", 10/3 );
-            TestCaC( "disc-caching", 1);
-            TestCaC( "live-caching", 1 );
-            if( b_cache_equal )
-                ui.cachingCombo->setCurrentIndex(
-                    ui.cachingCombo->findData( QVariant( i_cache ) ) );
-#undef TestCaC
+            // Dedicated Settings pages own these controls now.
+            ui.groupBox_2->hide();
+            ui.groupBox_3->hide();
+            ui.recordLabel->hide();
+            ui.recordPath->hide();
+            ui.recordBrowse->hide();
 
             break;
         }
@@ -931,7 +893,8 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
             configGenericFile<FileConfigControl>( "skins2-last",  ui.skinFileLabel,
                                  ui.fileSkin, ui.skinBrowse );
 
-            configBool( "metadata-network-access", ui.MetadataNetworkAccessMode );
+            // Network metadata access lives in the dedicated Network category.
+            ui.MetadataNetworkAccessMode->hide();
             configBool( "qt-menubar", ui.menuBarCheck );
 
 
@@ -1024,11 +987,9 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
         }
 
         /********************************
-         * GENERAL / NETWORK / PERFORMANCE
+         * GENERAL SETTINGS
          ********************************/
         case SPrefsGeneral:
-        case SPrefsNetwork:
-        case SPrefsPerformance:
         {
             if ( !m_nativeModules )
                 m_nativeModules = module_list_get( &m_nativeModuleCount );
@@ -1041,64 +1002,134 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
             for ( int i = 0; i < m_nativeConfigTree->topLevelItemCount(); ++i )
             {
                 PrefsTreeItem *category = m_nativeConfigTree->topLevelItem( i );
-                if ( number == SPrefsGeneral && category->cat_id == CAT_INTERFACE )
-                    target = category;
-                else if ( number == SPrefsPerformance && category->cat_id == CAT_INPUT )
-                    target = category;
-                else if ( number == SPrefsNetwork && category->cat_id == CAT_ADVANCED )
+                if ( category->cat_id == CAT_ADVANCED )
                 {
-                    for ( int j = 0; j < category->childCount(); ++j )
-                    {
-                        PrefsTreeItem *subcategory = category->child( j );
-                        if ( subcategory->subcat_id == SUBCAT_ADVANCED_NETWORK )
-                        {
-                            target = subcategory;
-                            break;
-                        }
-                    }
-                }
-                if ( target )
+                    target = category;
                     break;
+                }
             }
 
             if ( target )
             {
-                if ( number == SPrefsGeneral )
-                {
-                    target->name = qtr( "General" );
-                    target->help = qtr( "General application and interface preferences." );
-                    panel_label->setText( qtr( "General" ) );
-                }
-                else if ( number == SPrefsNetwork )
-                {
-                    target->name = qtr( "Network" );
-                    target->help = qtr( "Configure VLC's network-related preferences." );
-                    panel_label->setText( qtr( "Network" ) );
-                }
-                else
-                {
-                    target->name = qtr( "Performance" );
-                    target->help = qtr( "Configure decoding, input and performance-related preferences." );
-                    panel_label->setText( qtr( "Performance" ) );
-                }
-
+                target->name = qtr( "General" );
+                target->help = qtr( "General VLC settings that are not specific to playback, audio, video or the interface." );
                 target->help_html.clear();
-                m_nativeConfigPanel = new AdvPrefsPanel( p_intf, this, target );
                 panel_label->hide();
                 title_line->hide();
+                m_nativeConfigPanel = new AdvPrefsPanel( p_intf, this, target );
                 delete panel;
                 panel = nullptr;
-                break;
             }
+            else
+            {
+                panel_label->setText( qtr( "General" ) );
+                auto *unavailableLayout = new QVBoxLayout( panel );
+                unavailableLayout->setContentsMargins( 0, 0, 0, 0 );
+                auto *unavailableLabel = new QLabel(
+                    qtr( "General native settings are not available in this build." ), panel );
+                unavailableLabel->setWordWrap( true );
+                unavailableLayout->addWidget( unavailableLabel );
+                unavailableLayout->addStretch( 1 );
+            }
+            break;
+        }
 
-            panel_label->setText( qtr( "Settings unavailable" ) );
-            auto *unavailableLayout = new QVBoxLayout( panel );
-            unavailableLayout->setContentsMargins( 0, 0, 0, 0 );
-            auto *unavailableLabel = new QLabel(
-                qtr( "The native settings for this category are not available in this build." ), panel );
-            unavailableLabel->setWordWrap( true );
-            unavailableLayout->addWidget( unavailableLabel );
-            unavailableLayout->addStretch( 1 );
+        /********************************
+         * NETWORK SETTINGS
+         ********************************/
+        case SPrefsNetwork:
+        {
+            panel_label->setText( qtr( "Network" ) );
+
+            auto *contentLayout = new QVBoxLayout( panel );
+            contentLayout->setContentsMargins( 0, 0, 0, 0 );
+            contentLayout->setSpacing( 12 );
+
+            auto *connectionGroup = new QGroupBox( qtr( "Connection" ), panel );
+            auto *connectionLayout = new QGridLayout( connectionGroup );
+
+            auto *proxyLabel = new QLabel( qtr( "HTTP proxy URL" ), connectionGroup );
+            auto *proxy = new QLineEdit( connectionGroup );
+            proxyLabel->setBuddy( proxy );
+            connectionLayout->addWidget( proxyLabel, 0, 0 );
+            connectionLayout->addWidget( proxy, 0, 1 );
+            configGeneric<StringConfigControl>( "http-proxy", proxyLabel, proxy );
+
+            auto *metadataAccess = new QCheckBox(
+                qtr( "Allow network access to media metadata" ), connectionGroup );
+            configBool( "metadata-network-access", metadataAccess );
+            connectionLayout->addWidget( metadataAccess, 1, 0, 1, 2 );
+
+            auto *rtspTcp = new QCheckBox( qtr( "Use RTSP-over-TCP transport" ), connectionGroup );
+            if ( module_exists( "live555" ) )
+                configBool( "rtsp-tcp", rtspTcp );
+            else
+                rtspTcp->setEnabled( false );
+            connectionLayout->addWidget( rtspTcp, 2, 0, 1, 2 );
+
+            auto *cachingGroup = new QGroupBox( qtr( "Network and stream caching" ), panel );
+            auto *cachingLayout = new QGridLayout( cachingGroup );
+            auto *cachingLabel = new QLabel( qtr( "Default caching policy" ), cachingGroup );
+            m_networkCachingCombo = new QComboBox( cachingGroup );
+            cachingLabel->setBuddy( m_networkCachingCombo );
+
+            m_networkCachingCombo->addItem( qtr( "Custom" ), QVariant( CachingCustom ) );
+            m_networkCachingCombo->addItem( qtr( "Lowest latency" ), QVariant( CachingLowest ) );
+            m_networkCachingCombo->addItem( qtr( "Low latency" ), QVariant( CachingLow ) );
+            m_networkCachingCombo->addItem( qtr( "Normal" ), QVariant( CachingNormal ) );
+            m_networkCachingCombo->addItem( qtr( "High latency" ), QVariant( CachingHigh ) );
+            m_networkCachingCombo->addItem( qtr( "Higher latency" ), QVariant( CachingHigher ) );
+
+            const int fileCaching = config_GetInt( "file-caching" );
+            const bool presetMatches =
+                fileCaching * 3 == config_GetInt( "network-caching" ) &&
+                fileCaching == config_GetInt( "disc-caching" ) &&
+                fileCaching == config_GetInt( "live-caching" );
+            if ( presetMatches )
+                m_networkCachingCombo->setCurrentIndex(
+                    m_networkCachingCombo->findData( QVariant( fileCaching ) ) );
+            else
+                m_networkCachingCombo->setCurrentIndex( 0 );
+
+            cachingLayout->addWidget( cachingLabel, 0, 0 );
+            cachingLayout->addWidget( m_networkCachingCombo, 0, 1 );
+
+            auto *cachingHint = new QLabel(
+                qtr( "Higher caching can smooth unstable streams; lower caching reduces playback delay." ),
+                cachingGroup );
+            cachingHint->setWordWrap( true );
+            cachingLayout->addWidget( cachingHint, 1, 0, 1, 2 );
+
+            contentLayout->addWidget( connectionGroup );
+            contentLayout->addWidget( cachingGroup );
+            contentLayout->addStretch( 1 );
+            break;
+        }
+
+        /********************************
+         * PERFORMANCE SETTINGS
+         ********************************/
+        case SPrefsPerformance:
+        {
+            auto& ui = m_inputCodecUI;
+            ui.setupUi( panel );
+            panel_label->setText( qtr( "Performance" ) );
+
+            // Keep the existing native codec controls, but make them a dedicated page.
+            ui.groupBox->hide();
+            ui.groupBox_2->hide();
+            ui.groupBox_4->hide();
+            ui.groupBox_3->setTitle( qtr( "Decoding and encoding" ) );
+
+            configGeneric<IntegerConfigControl>( "postproc-q", ui.ppLabel, ui.PostProcLevel );
+            configGeneric<StringListConfigControl>( "dec-dev", ui.hwAccelLabel, ui.hwAccelModule );
+            configBool( "input-fast-seek", ui.fastSeekBox );
+            configGeneric<IntegerListConfigControl>( "avcodec-skiploopfilter",
+                                                       ui.filterLabel, ui.loopFilterBox );
+            configGeneric<StringListConfigControl>( "sout-x264-tune", ui.x264Label, ui.tuneBox );
+            configGeneric<StringListConfigControl>( "sout-x264-preset", ui.x264Label, ui.presetBox );
+            configGeneric<StringListConfigControl>( "sout-x264-profile", ui.x264profileLabel, ui.profileBox );
+            configGeneric<StringConfigControl>( "sout-x264-level", ui.x264profileLabel, ui.levelBox );
             break;
         }
 
@@ -1511,6 +1542,22 @@ void SPrefsPanel::apply()
 
     switch( number )
     {
+    case SPrefsNetwork:
+    {
+        if ( m_networkCachingCombo )
+        {
+            const int caching = m_networkCachingCombo->currentData().toInt();
+            if ( caching )
+            {
+                config_PutInt( "file-caching", caching );
+                config_PutInt( "network-caching", caching * (10 / 3) );
+                config_PutInt( "disc-caching", caching );
+                config_PutInt( "live-caching", caching );
+            }
+        }
+        break;
+    }
+
     case SPrefsInputAndCodecs:
     {
         /* Device default selection */
@@ -1523,19 +1570,7 @@ void SPrefsPanel::apply()
                 config_PutPsz( "cd-audio", devicepath.constData() );
         }
 
-#define CaC( name, factor ) config_PutInt( name, i_comboValue * factor )
-        /* Caching */
-        QComboBox *cachingCombo = m_inputCodecUI.cachingCombo;
-        int i_comboValue = cachingCombo->itemData( cachingCombo->currentIndex() ).toInt();
-        if( i_comboValue )
-        {
-            CaC( "file-caching", 1 );
-            CaC( "network-caching", 10/3 );
-            CaC( "disc-caching", 1 );
-            CaC( "live-caching", 1 );
-        }
         break;
-#undef CaC
     }
 
     /* Interfaces */
