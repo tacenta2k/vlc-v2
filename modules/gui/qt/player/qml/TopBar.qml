@@ -201,6 +201,14 @@ FocusScope{
 
     // Children
 
+    // Figma redesign: keep the native title bar controls, but give the player
+    // chrome its own stable, near-black surface.
+    Rectangle {
+        anchors.fill: parent
+        z: -1
+        color: VLCStyle.playerTopbar
+    }
+
     //drag and dbl click the titlebar in CSD mode
     Loader {
         id: tapNDrag
@@ -301,7 +309,7 @@ FocusScope{
                 anchors.left: backBtn.right
                 anchors.leftMargin: VLCStyle.margin_xxsmall
 
-                color: theme.accent
+                color: VLCStyle.playerAccent
             }
         }
 
@@ -353,7 +361,7 @@ FocusScope{
         rightPadding: VLCStyle.margin_small
 
         text: root.title
-        color: theme.fg.primary
+        color: VLCStyle.playerForeground
         font.pixelSize: VLCStyle.dp(13, VLCStyle.scale)
         font.weight: Font.DemiBold
         elide: Text.ElideRight
