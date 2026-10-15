@@ -1349,7 +1349,7 @@ FocusScope {
                 }
             }
 
-            color: windowTheme.bg.primary
+            color: VLCStyle.playerControlBackground
         }
 
         FadeControllerStateGroup {
