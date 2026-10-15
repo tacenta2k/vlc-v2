@@ -120,8 +120,6 @@ static bool isNodeValid(const QQmlPropertyMap& value)
 
 void NavigationHistory::update(QStringList path)
 {
-    clearForwardHistory();
-
     if (m_history.size() == 0)
     {
         m_history.emplace_back(path, std::make_unique<QQmlPropertyMap>());
@@ -136,8 +134,6 @@ void NavigationHistory::update(QStringList path)
 
 void NavigationHistory::update(QStringList path, const QVariantMap& properties)
 {
-    clearForwardHistory();
-
     if (m_history.size() == 0)
     {
         auto prop = std::make_unique<QQmlPropertyMap>();
