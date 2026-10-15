@@ -49,7 +49,7 @@ T.Pane {
     readonly property real sliderY: mapFromItem(contentItem, 0, contentItem.sliderY).y
     property int textPosition: ControlBar.TimeTextPosition.AboveSlider
     property int identifier: -1
-    property real sliderHeight: VLCStyle.heightBar_xxsmall
+    property real sliderHeight: compactTransport ? VLCStyle.heightBar_xxxsmall : VLCStyle.heightBar_xxsmall
     property real bookmarksHeight: VLCStyle.controlBarBookmarksHeight
     property bool showRemainingTime: true
 
@@ -161,7 +161,7 @@ T.Pane {
 
                 Layout.preferredWidth: (textPosition === ControlBar.TimeTextPosition.LeftRightSlider) ? timeTextMetrics.width : -1
 
-                readonly property bool showRemainingTime: (MainCtx.showRemainingTime && Player.remainingTime.valid())
+                readonly property bool showRemainingTime: (!root.compactTransport && MainCtx.showRemainingTime && Player.remainingTime.valid())
 
                 text: showRemainingTime
                       ? "-" + Player.remainingTime.formatHMS()
@@ -186,6 +186,7 @@ T.Pane {
                 anchors.verticalCenter: (parent === pseudoRow) ? parent.verticalCenter : undefined
 
                 TapHandler {
+                    enabled: !root.compactTransport
                     onTapped: (eventPoint, button) => {
                         MainCtx.showRemainingTime = !MainCtx.showRemainingTime
                     }
