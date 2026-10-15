@@ -163,10 +163,18 @@ void NavigationHistory::previous(Qt::FocusReason reason)
     m_future.emplace_back(std::move(m_history.back()));
     m_history.pop_back();
 
-    while (!isNodeValid(*m_history.back().second)) {
+    // Skip invalid destinations without ever removing the final history entry.
+    while (m_history.size() > 1 && !isNodeValid(*m_history.back().second))
         m_history.pop_back();
-        if (m_history.size() == 1)
-            break;
+
+    if (!isNodeValid(*m_history.back().second)) {
+        // No valid previous destination remains. Restore the current page and
+        // discard the stale history rather than dereferencing an empty vector.
+        m_history.clear();
+        m_history.emplace_back(std::move(m_future.back()));
+        m_future.pop_back();
+        emit previousEmptyChanged(true);
+        return;
     }
 
     if (m_history.size() == 1)
