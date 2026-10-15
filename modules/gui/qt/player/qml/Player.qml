@@ -1296,9 +1296,8 @@ FocusScope {
         leftPadding: VLCStyle.applicationHorizontalMargin
         bottomPadding: VLCStyle.applicationVerticalMargin + VLCStyle.margin_xsmall
 
-        textPosition: (MainCtx.pinVideoControls)
-                      ? ControlBar.TimeTextPosition.LeftRightSlider
-                      : ControlBar.TimeTextPosition.AboveSlider
+        // The redesign keeps elapsed/remaining time on the same line as the seek bar.
+        textPosition: ControlBar.TimeTextPosition.LeftRightSlider
 
         // hide right text so that it won't overlap with play queue
         showRemainingTime: (textPosition !== ControlBar.TimeTextPosition.AboveSlider)
