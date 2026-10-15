@@ -53,6 +53,9 @@ T.Pane {
     property real bookmarksHeight: VLCStyle.controlBarBookmarksHeight
     property bool showRemainingTime: true
 
+    // The Figma player uses one compact transport row for time, seek and controls.
+    property bool compactTransport: true
+
     property var menu: undefined
 
     signal requestLockUnlockAutoHide(bool lock)
@@ -244,14 +247,14 @@ T.Pane {
                 active: MainCtx.mediaLibraryAvailable
                 source: "qrc:///qt/qml/VLC/MediaLibrary/Bookmarks.qml"
 
-                x: root.leftPadding + trackPositionSlider.x + row2.Layout.leftMargin
-                y: row2.y + row2.height + VLCStyle.margin_xxsmall
+                x: trackPositionSlider.mapToItem(root, 0, 0).x
+                y: trackPositionSlider.mapToItem(root, 0, 0).y + trackPositionSlider.height + VLCStyle.margin_xxsmall
                 width: trackPositionSlider.width
 
                 onLoaded: {
                    item.barHeight = Qt.binding(function() { return bookmarksHeight })
                    item.controlBarHovered = Qt.binding(function() { return root.hovered })
-                   item.yShift = Qt.binding(function() { return row2.height + VLCStyle.margin_xxsmall })
+                   item.yShift = Qt.binding(function() { return trackPositionSlider.height + VLCStyle.margin_xxsmall })
                 }
             }
         ]
@@ -270,9 +273,12 @@ T.Pane {
 
             implicitHeight: visible ? Math.max(mediaTime.implicitHeight, mediaRemainingTime.implicitHeight) : 0
 
-            visible: children.length > 0
+            visible: !root.compactTransport && children.length > 0
 
             children: {
+                if (root.compactTransport)
+                    return []
+
                 switch (textPosition) {
                 case ControlBar.TimeTextPosition.AboveSlider:
                     return [mediaTime, mediaRemainingTime]
@@ -288,6 +294,9 @@ T.Pane {
             id: row2
 
             children: {
+                if (root.compactTransport)
+                    return []
+
                 switch (textPosition) {
                 case ControlBar.TimeTextPosition.Hide:
                 case ControlBar.TimeTextPosition.AboveSlider:
@@ -299,7 +308,7 @@ T.Pane {
                 }
             }
 
-            visible: children.length > 0
+            visible: !root.compactTransport && children.length > 0
 
             spacing: VLCStyle.margin_xsmall
 
@@ -313,6 +322,9 @@ T.Pane {
 
         PlayerControlLayout {
             id: playerControlLayout
+
+            inlineContent: root.compactTransport ? compactTimelineComponent : null
+            spacing: VLCStyle.margin_xsmall
 
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -334,6 +346,17 @@ T.Pane {
 
             Component.onCompleted: {
                 root.forceUnlock.connect(playerControlLayout.forceUnlock)
+            }
+        }
+
+        // These are the original VLC timeline items, not custom replacements.
+        // Reparenting preserves the player's real seek, chapter, and time behavior.
+        Component {
+            id: compactTimelineComponent
+
+            RowLayout {
+                spacing: VLCStyle.margin_xsmall
+                children: [mediaTime, trackPositionSlider, mediaRemainingTime]
             }
         }
     }
