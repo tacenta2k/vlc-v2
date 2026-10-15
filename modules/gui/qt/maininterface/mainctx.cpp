@@ -159,6 +159,10 @@ MainCtx::MainCtx(qt_intf_t *_p_intf)
      **/
 
     settings = getSettings();
+    const QColor savedAccentColor(
+        settings->value("redesign/accent-color", QStringLiteral("#D37918")).toString());
+    if (savedAccentColor.isValid())
+        m_redesignAccentColor = savedAccentColor;
     m_colorScheme = new ColorSchemeModel(this);
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
@@ -1059,6 +1063,16 @@ QVariant MainCtx::settingValue(const QString &key, const QVariant &defaultValue)
 void MainCtx::setSettingValue(const QString &key, const QVariant &value)
 {
     settings->setValue(key, value);
+}
+
+void MainCtx::setRedesignAccentColor(const QColor &color)
+{
+    if (!color.isValid() || color == m_redesignAccentColor)
+        return;
+
+    m_redesignAccentColor = color;
+    settings->setValue("redesign/accent-color", color.name(QColor::HexRgb));
+    emit redesignAccentColorChanged(m_redesignAccentColor);
 }
 
 void MainCtx::setAttachedToolTip(QObject *toolTip)

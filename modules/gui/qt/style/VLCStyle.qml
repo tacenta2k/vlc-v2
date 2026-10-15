@@ -53,7 +53,7 @@ QtObject {
     readonly property color playerTopbar: "#191919"
     readonly property color playerControlBackground: "#090909"
     readonly property color playerTrack: "#222222"
-    readonly property color playerAccent: "#D37918"
+    readonly property color playerAccent: MainCtx.redesignAccentColor
     readonly property color playerForeground: "#969696"
     readonly property color playerMutedForeground: "#6B6B6B"
 
