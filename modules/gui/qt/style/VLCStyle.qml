@@ -64,6 +64,7 @@ QtObject {
     readonly property color libraryTextSecondary: "#6B6B6B"
     readonly property color libraryTextActive: "#E5E5E5"
     readonly property color libraryDivider: "#222222"
+    readonly property color librarySearchBackground: "#171717"
     readonly property color libraryNavSelected: "#242424"
     readonly property int libraryGridHorizontalSpacing: MainCtx.dp(20, scale)
 

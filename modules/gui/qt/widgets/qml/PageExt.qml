@@ -22,6 +22,7 @@ import QtQuick.Templates as T
 import VLC.MainInterface
 import VLC.Style
 import VLC.Menus
+import VLC.Dialogs
 import VLC.Util
 
 T.Page {
@@ -52,6 +53,73 @@ T.Page {
 
     readonly property SearchCtx search: _searchCtx
     readonly property SortCtx sort: _sortCtx
+
+    // Number of rows in the active native media model, when this page exposes one.
+    readonly property int mediaCount: {
+        const count = _firstChild?.model?.count
+        return (typeof count === "number" && Number.isFinite(count)) ? count : -1
+    }
+
+    // Translate VLC's route path into user-facing breadcrumb labels.
+    // Group and folder titles come from the current native navigation context.
+    readonly property var breadcrumbItems: {
+        const path = History.viewPath ?? []
+        const labels = {
+            "home": qsTr("Home"),
+            "video": qsTr("Videos"),
+            "music": qsTr("Music"),
+            "network": qsTr("Network"),
+            "discover": qsTr("Discover"),
+            "playlists": qsTr("Playlists"),
+            "artists": qsTr("Artists"),
+            "albums": qsTr("Albums"),
+            "tracks": qsTr("Tracks"),
+            "genres": qsTr("Genres"),
+            "services": qsTr("Services"),
+            "url": qsTr("URL")
+        }
+        const items = []
+
+        for (let i = 0; i < path.length; ++i) {
+            const key = String(path[i])
+
+            // This route names an implementation page, not a user-facing crumb.
+            if (key === "all")
+                continue
+
+            if (key === "group" || key === "folder") {
+                if (i === path.length - 1) {
+                    const currentTitle = History.viewProp?.title
+                    if (currentTitle !== undefined && String(currentTitle).length > 0) {
+                        items.push({
+                            label: String(currentTitle),
+                            path: path.slice(0, i + 1),
+                            current: true
+                        })
+                    }
+                }
+                continue
+            }
+
+            const label = labels[key]
+            if (!label)
+                continue
+
+            items.push({
+                label: label,
+                path: path.slice(0, i + 1),
+                current: false
+            })
+        }
+
+        if (items.length === 0) {
+            items.push({ label: root.title || qsTr("VLC"), path: [], current: true })
+        } else {
+            items[items.length - 1].current = true
+        }
+
+        return items
+    }
 
 
     SearchCtx {
@@ -184,15 +252,96 @@ T.Page {
             id: row
 
             anchors.fill: parent
+            spacing: VLCStyle.margin_xxsmall
 
-            SubtitleLabel {
-                id: label
+            RowLayout {
+                id: breadcrumbRow
 
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                spacing: VLCStyle.margin_xxsmall
 
-                color: VLCStyle.libraryTextPrimary
-                font.pixelSize: VLCStyle.fontSize_large
-                font.weight: Font.Normal
+                IconToolButton {
+                    text: VLCIcons.back
+                    description: qsTr("Back")
+                    color: VLCStyle.libraryTextPrimary
+                    backgroundColor: VLCStyle.libraryBackground
+                    font.pixelSize: VLCStyle.icon_normal
+                    Layout.preferredWidth: VLCStyle.dp(28, VLCStyle.scale)
+                    Layout.preferredHeight: VLCStyle.dp(28, VLCStyle.scale)
+                    enabled: !History.previousEmpty
+                    onClicked: History.previous(Qt.MouseFocusReason)
+                }
+
+                // This VLC revision exposes backward history navigation only.
+                // Keep the Figma forward affordance visibly disabled until native
+                // forward-history support exists, rather than faking navigation.
+                IconToolButton {
+                    text: VLCIcons.next
+                    description: qsTr("Forward")
+                    color: VLCStyle.libraryTextSecondary
+                    backgroundColor: VLCStyle.libraryBackground
+                    font.pixelSize: VLCStyle.icon_normal
+                    Layout.preferredWidth: VLCStyle.dp(28, VLCStyle.scale)
+                    Layout.preferredHeight: VLCStyle.dp(28, VLCStyle.scale)
+                    enabled: false
+                }
+
+                Repeater {
+                    model: root.breadcrumbItems
+
+                    delegate: RowLayout {
+                        required property int index
+                        required property var modelData
+
+                        property var crumbData: modelData
+                        spacing: VLCStyle.margin_xxsmall
+
+                        T.Label {
+                            visible: index > 0
+                            text: "›"
+                            color: VLCStyle.libraryTextSecondary
+                            font.pixelSize: VLCStyle.fontSize_large
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        T.ToolButton {
+                            id: crumbButton
+
+                            text: crumbData.label
+                            enabled: !crumbData.current && crumbData.path.length > 0
+                            padding: 0
+                            Layout.preferredHeight: VLCStyle.dp(28, VLCStyle.scale)
+                            Layout.preferredWidth: crumbLabel.implicitWidth
+
+                            Accessible.name: crumbData.label
+                            onClicked: History.push(crumbData.path, Qt.MouseFocusReason)
+
+                            contentItem: T.Label {
+                                id: crumbLabel
+                                text: crumbButton.text
+                                color: crumbButton.enabled ? VLCStyle.libraryTextPrimary
+                                                           : VLCStyle.libraryTextActive
+                                font.pixelSize: VLCStyle.fontSize_normal
+                                font.weight: crumbButton.enabled ? Font.Normal : Font.DemiBold
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                            }
+
+                            background: Item {}
+                        }
+                    }
+                }
+            }
+
+            T.Label {
+                id: itemCountLabel
+
+                visible: root.mediaCount >= 0
+                text: visible ? qsTr("%1 items").arg(root.mediaCount) : ""
+                color: VLCStyle.libraryTextSecondary
+                font.pixelSize: VLCStyle.fontSize_small
+                verticalAlignment: Text.AlignVCenter
             }
 
             GridSortFilterControls {
@@ -201,6 +350,39 @@ T.Page {
                 sort: _sortCtx
                 search: _searchCtx
                 Navigation.parentItem: defaultPageHeader
+            }
+
+            IconToolButton {
+                id: addMediaButton
+
+                text: VLCIcons.add
+                description: qsTr("Add media")
+                color: VLCStyle.libraryTextPrimary
+                backgroundColor: VLCStyle.libraryBackground
+                font.pixelSize: VLCStyle.icon_normal
+                Layout.preferredWidth: VLCStyle.dp(28, VLCStyle.scale)
+                Layout.preferredHeight: VLCStyle.dp(28, VLCStyle.scale)
+
+                onClicked: DialogsProvider.simpleOpenDialog()
+            }
+
+            IconToolButton {
+                id: overflowButton
+
+                text: VLCIcons.more
+                description: qsTr("More options")
+                color: VLCStyle.libraryTextPrimary
+                backgroundColor: VLCStyle.libraryBackground
+                font.pixelSize: VLCStyle.icon_normal
+                Layout.preferredWidth: VLCStyle.dp(28, VLCStyle.scale)
+                Layout.preferredHeight: VLCStyle.dp(28, VLCStyle.scale)
+
+                onClicked: globalMenu.popup(this.mapToGlobal(0, height))
+
+                QmlGlobalMenu {
+                    id: globalMenu
+                    ctx: MainCtx
+                }
             }
         }
     }
