@@ -760,6 +760,22 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
             ui.recordPath->hide();
             ui.recordBrowse->hide();
 
+            // Resume behavior belongs to Playback, and is relevant when the media library is enabled.
+            auto *resumeGroup = new QGroupBox( qtr( "Resume playback" ), panel );
+            auto *resumeLayout = new QHBoxLayout( resumeGroup );
+            auto *resumeLabel = new QLabel(
+                qtr( "When opening a previously played item" ), resumeGroup );
+            auto *resumeCombo = new QComboBox( resumeGroup );
+            resumeLabel->setBuddy( resumeCombo );
+            resumeLayout->addWidget( resumeLabel );
+            resumeLayout->addWidget( resumeCombo, 1 );
+            if ( p_intf->p_mi->hasMediaLibrary() )
+                configGeneric<IntegerListConfigControl>(
+                    "restore-playback-pos", resumeLabel, resumeCombo );
+            else
+                resumeGroup->hide();
+            panel->layout()->addWidget( resumeGroup );
+
             break;
         }
 
@@ -1459,21 +1475,14 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
         }
     }
 
-    if ( m_nativeConfigPanel )
-    {
-        panel_layout->addWidget( m_nativeConfigPanel );
-    }
-    else
-    {
-        panel_layout->addWidget( panel_label );
-        panel_layout->addWidget( title_line );
+    panel_layout->addWidget( panel_label );
+    panel_layout->addWidget( title_line );
 
-        QScrollArea *scroller = new QScrollArea;
-        scroller->setWidget( panel );
-        scroller->setWidgetResizable( true );
-        scroller->setFrameStyle( QFrame::NoFrame );
-        panel_layout->addWidget( scroller );
-    }
+    QScrollArea *scroller = new QScrollArea;
+    scroller->setWidget( panel );
+    scroller->setWidgetResizable( true );
+    scroller->setFrameStyle( QFrame::NoFrame );
+    panel_layout->addWidget( scroller );
 
     setLayout( panel_layout );
 }
