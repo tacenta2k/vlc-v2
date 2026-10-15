@@ -500,7 +500,7 @@ void PrefsDialog::setExpert()
 
     expert->setChecked( true );
     stack->setCurrentIndex( EXPERT );
-    setWindowTitle( qtr( "Expert Preferences" ) );
+    setWindowTitle( qtr( "Expert Settings" ) );
 }
 
 void PrefsDialog::setAdvanced()
@@ -655,7 +655,7 @@ void PrefsDialog::save()
                           qtr( "VLC needs to be restarted for the reset to take full effect.\n\nRestart now?" ),
                           QMessageBox::Yes | QMessageBox::No,
                           QMessageBox::Yes);
-        
+
         if( restart == QMessageBox::Yes )
         {
             // Quit VLC
@@ -674,10 +674,10 @@ void PrefsDialog::save()
 void PrefsDialog::cancel()
 {
     bool wasResetting = p_intf->preferencesResetPending;
-    
+
     // Clear the reset flag
     p_intf->preferencesResetPending = false;
-    
+
     if( !wasResetting )
         QVLCTools::saveWidgetPosition( p_intf, "Preferences", this );
     reject();

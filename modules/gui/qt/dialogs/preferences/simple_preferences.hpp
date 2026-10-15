@@ -48,9 +48,9 @@ class MLFoldersEditor;
 class QLineEdit;
 class QToolButton;
 class QLabel;
-class QLabel;
 class QPushButton;
 class QAbstractButton;
+class QString;
 
 enum {
     SPrefsInterface = 0,
@@ -74,7 +74,6 @@ enum {
 };
 
 class ConfigControl;
-class QString;
 
 #ifdef _WIN32
 class QTreeWidgetItem;
