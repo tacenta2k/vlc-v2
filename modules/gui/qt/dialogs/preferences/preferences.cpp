@@ -45,6 +45,7 @@
 #include <QStackedWidget>
 #include <QSplitter>
 #include <QShortcut>
+#include <QFrame>
 
 #include <vlc_configuration.h>
 #include <vlc_modules.h>
@@ -52,8 +53,10 @@
 PrefsDialog::PrefsDialog( QWindow *parent, qt_intf_t *_p_intf )
             : QVLCDialog( parent, _p_intf )
 {
-    setWindowTitle( qtr( "Preferences" ) );
+    setObjectName( "vlcSettingsDialog" );
+    setWindowTitle( qtr( "Settings" ) );
     setWindowRole( "vlc-preferences" );
+    setMinimumSize( QSize( 820, 620 ) );
     setWindowModality( Qt::WindowModal );
 
     /* Whether we want it or not, we need to destroy on close to get
@@ -63,10 +66,12 @@ PrefsDialog::PrefsDialog( QWindow *parent, qt_intf_t *_p_intf )
     p_list = NULL;
 
     QGridLayout *main_layout = new QGridLayout( this );
+    main_layout->setObjectName( "settingsRootLayout" );
     setLayout( main_layout );
 
     /* View (panel) selection */
     types = new QGroupBox( qtr("Show settings") );
+    types->setObjectName( "settingsModeSelector" );
     types->setAlignment( Qt::AlignHCenter );
     QHBoxLayout *types_l = new QHBoxLayout;
     types_l->setSpacing( 3 );
@@ -85,10 +90,14 @@ PrefsDialog::PrefsDialog( QWindow *parent, qt_intf_t *_p_intf )
 
     /* Buttons */
     QDialogButtonBox *buttonsBox = new QDialogButtonBox();
+    buttonsBox->setObjectName( "settingsButtonBox" );
     QPushButton *save = new QPushButton( qtr( "&Save" ) );
+    save->setObjectName( "settingsSaveButton" );
     save->setToolTip( qtr( "Save and close the dialog" ) );
     QPushButton *cancel = new QPushButton( qtr( "&Cancel" ) );
+    cancel->setObjectName( "settingsCancelButton" );
     QPushButton *reset = new QPushButton( qtr( "&Reset Preferences" ) );
+    reset->setObjectName( "settingsResetButton" );
 
     buttonsBox->addButton( save, QDialogButtonBox::AcceptRole );
     buttonsBox->addButton( cancel, QDialogButtonBox::RejectRole );
@@ -96,24 +105,32 @@ PrefsDialog::PrefsDialog( QWindow *parent, qt_intf_t *_p_intf )
 
     /* View (panel) stack */
     stack = new QStackedWidget();
+    stack->setObjectName( "settingsViewStack" );
 
     /* Simple view (panel) */
     simple_split_widget = new QWidget();
-    simple_split_widget->setLayout( new QVBoxLayout );
+    simple_split_widget->setObjectName( "settingsSimpleSplit" );
+    simple_split_widget->setLayout( new QHBoxLayout );
 
     simple_tree_panel = new QWidget;
+    simple_tree_panel->setObjectName( "settingsSidebar" );
     simple_tree_panel->setLayout( new QVBoxLayout );
+    simple_tree_panel->setMinimumWidth( 205 );
+    simple_tree_panel->setMaximumWidth( 225 );
     simple_tree = NULL;
     simple_panels_stack = new QStackedWidget;
+    simple_panels_stack->setObjectName( "settingsContent" );
     for( int i = 0; i < SPrefsMax ; i++ )
         simple_panels[i] = NULL;
 
     simple_split_widget->layout()->addWidget( simple_tree_panel );
-    simple_split_widget->layout()->addWidget( simple_panels_stack );
+    simple_split_widget->layout()->addWidget( simple_panels_stack, 1 );
 
-    simple_tree_panel->layout()->setContentsMargins(1, 1, 1, 1);
-    simple_panels_stack->setContentsMargins( 6, 0, 0, 3 );
-    simple_split_widget->layout()->setContentsMargins(0, 0, 0, 0);
+    simple_tree_panel->layout()->setContentsMargins( 10, 10, 10, 10 );
+    simple_tree_panel->layout()->setSpacing( 8 );
+    simple_panels_stack->setContentsMargins( 0, 0, 0, 0 );
+    simple_split_widget->layout()->setContentsMargins( 0, 0, 0, 0 );
+    simple_split_widget->layout()->setSpacing( 12 );
 
     stack->insertWidget( SIMPLE, simple_split_widget );
 
@@ -165,7 +182,261 @@ PrefsDialog::PrefsDialog( QWindow *parent, qt_intf_t *_p_intf )
     main_layout->addWidget( types, 3, 0, 2, 1 );
     main_layout->addWidget( buttonsBox, 4, 2, 1 ,1 );
     main_layout->setRowStretch( 2, 4 );
-    main_layout->setContentsMargins(9, 9, 9, 9);
+    main_layout->setContentsMargins( 12, 12, 12, 12 );
+    main_layout->setHorizontalSpacing( 12 );
+    main_layout->setVerticalSpacing( 8 );
+
+    setStyleSheet( QStringLiteral( R"VLCQSS(
+        QDialog#vlcSettingsDialog {
+            background: #0E0E0E;
+            color: #969696;
+        }
+        QWidget#settingsSimpleSplit,
+        QStackedWidget#settingsViewStack,
+        QWidget#settingsContent {
+            background: #0E0E0E;
+            color: #969696;
+            border: 0;
+        }
+        QWidget#settingsSidebar {
+            background: #191919;
+            border: 0;
+            border-radius: 8px;
+        }
+        QWidget#settingsPage {
+            background: #0E0E0E;
+            color: #969696;
+        }
+        QLabel {
+            color: #969696;
+            background: transparent;
+        }
+        QLabel#settingsPageTitle {
+            color: #E5E5E5;
+            font-size: 18px;
+            font-weight: 500;
+            padding-bottom: 8px;
+        }
+        QFrame#settingsHeaderDivider {
+            color: #242424;
+            background: #242424;
+            border: 0;
+            max-height: 1px;
+        }
+        QLabel#settingsSectionTitle {
+            color: #C5C5C5;
+            font-size: 14px;
+            font-weight: 600;
+            padding-top: 8px;
+            padding-bottom: 3px;
+        }
+        QGroupBox {
+            color: #C5C5C5;
+            background: transparent;
+            border: 1px solid #262626;
+            border-radius: 7px;
+            margin-top: 12px;
+            padding: 12px 8px 8px 8px;
+            font-weight: 600;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            left: 12px;
+            padding: 0 5px;
+            color: #C5C5C5;
+        }
+        QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QPlainTextEdit, QTextEdit {
+            background: #171717;
+            color: #D0D0D0;
+            border: 1px solid #292929;
+            border-radius: 5px;
+            min-height: 28px;
+            padding: 2px 8px;
+            selection-background-color: #D37918;
+            selection-color: #101010;
+        }
+        QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus,
+        QPlainTextEdit:focus, QTextEdit:focus {
+            border: 1px solid #D37918;
+        }
+        QComboBox::drop-down {
+            border: 0;
+            width: 24px;
+        }
+        QComboBox QAbstractItemView {
+            background: #191919;
+            color: #D0D0D0;
+            selection-background-color: #2A2A2A;
+            selection-color: #F0F0F0;
+            border: 1px solid #303030;
+            outline: 0;
+        }
+        QPushButton, QToolButton {
+            background: #1B1B1B;
+            color: #B8B8B8;
+            border: 1px solid #292929;
+            border-radius: 5px;
+            padding: 7px 12px;
+            min-height: 26px;
+        }
+        QPushButton:hover, QToolButton:hover {
+            background: #242424;
+            color: #E5E5E5;
+            border-color: #393939;
+        }
+        QPushButton:pressed, QToolButton:pressed {
+            background: #2A2A2A;
+        }
+        QPushButton:disabled, QToolButton:disabled {
+            color: #5F5F5F;
+            background: #151515;
+            border-color: #202020;
+        }
+        QPushButton#settingsSaveButton {
+            background: #D37918;
+            color: #111111;
+            border: 1px solid #D37918;
+            font-weight: 600;
+            padding-left: 18px;
+            padding-right: 18px;
+        }
+        QPushButton#settingsSaveButton:hover {
+            background: #E38A28;
+            border-color: #E38A28;
+        }
+        QPushButton#settingsCancelButton {
+            background: #1B1B1B;
+            color: #CECECE;
+        }
+        QPushButton#settingsResetButton {
+            background: transparent;
+            color: #969696;
+            border-color: transparent;
+        }
+        QToolButton#settingsCategoryButton {
+            text-align: left;
+            padding: 7px 10px;
+            min-height: 24px;
+            border: 1px solid transparent;
+            border-radius: 5px;
+            background: transparent;
+        }
+        QToolButton#settingsCategoryButton:hover {
+            background: #222222;
+            color: #E5E5E5;
+        }
+        QToolButton#settingsCategoryButton:checked {
+            background: #242424;
+            color: #E5E5E5;
+            border-left: 3px solid #D37918;
+            padding-left: 8px;
+        }
+        QLineEdit#settingsSearchField {
+            background: #101010;
+            color: #D0D0D0;
+            border: 1px solid #262626;
+            border-radius: 6px;
+            padding-left: 10px;
+            padding-right: 8px;
+            min-height: 30px;
+        }
+        QLabel#settingsSectionLabel {
+            color: #626262;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 10px 8px 3px 8px;
+        }
+        QCheckBox, QRadioButton {
+            color: #969696;
+            spacing: 8px;
+            background: transparent;
+        }
+        QCheckBox::indicator, QRadioButton::indicator {
+            width: 16px;
+            height: 16px;
+        }
+        QCheckBox::indicator:unchecked, QRadioButton::indicator:unchecked {
+            background: #171717;
+            border: 1px solid #494949;
+            border-radius: 3px;
+        }
+        QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+            background: #D37918;
+            border: 1px solid #D37918;
+            border-radius: 3px;
+        }
+        QRadioButton::indicator:unchecked, QRadioButton::indicator:checked {
+            border-radius: 8px;
+        }
+        QSlider::groove:horizontal {
+            background: #282828;
+            height: 4px;
+            border-radius: 2px;
+        }
+        QSlider::sub-page:horizontal {
+            background: #D37918;
+            border-radius: 2px;
+        }
+        QSlider::handle:horizontal {
+            background: #D37918;
+            border: 0;
+            width: 12px;
+            height: 12px;
+            margin: -5px 0;
+            border-radius: 6px;
+        }
+        QScrollBar:vertical {
+            background: transparent;
+            width: 8px;
+            margin: 2px;
+        }
+        QScrollBar::handle:vertical {
+            background: #3C3C3C;
+            border-radius: 4px;
+            min-height: 22px;
+        }
+        QScrollBar::handle:vertical:hover {
+            background: #555555;
+        }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+        QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+            background: transparent;
+            border: 0;
+            height: 0;
+        }
+        QTreeWidget, QTreeView, QTableView, QTableWidget {
+            background: #111111;
+            color: #A0A0A0;
+            alternate-background-color: #171717;
+            border: 1px solid #262626;
+            selection-background-color: #282828;
+            selection-color: #F0F0F0;
+            gridline-color: #242424;
+            outline: 0;
+        }
+        QHeaderView::section {
+            background: #191919;
+            color: #8F8F8F;
+            border: 0;
+            border-bottom: 1px solid #282828;
+            padding: 7px;
+        }
+        QDialogButtonBox {
+            border: 0;
+            background: transparent;
+        }
+        QGroupBox#settingsModeSelector {
+            border: 0;
+            margin: 0;
+            padding: 0;
+            font-weight: normal;
+        }
+        QGroupBox#settingsModeSelector::title {
+            color: #6B6B6B;
+            left: 0;
+            padding: 0;
+        }
+    )VLCQSS") );
 
     switch( var_InheritInteger( p_intf, "qt-initial-prefs-view" ) )
     {
@@ -182,7 +453,7 @@ PrefsDialog::PrefsDialog( QWindow *parent, qt_intf_t *_p_intf )
     BUTTONACT( all, &PrefsDialog::setAdvanced );
     BUTTONACT( expert, &PrefsDialog::setExpert );
 
-    QVLCTools::restoreWidgetPosition( p_intf, "Preferences", this, QSize( 850, 700 ) );
+    QVLCTools::restoreWidgetPosition( p_intf, "Preferences", this, QSize( 1048, 865 ) );
 }
 
 PrefsDialog::~PrefsDialog()
@@ -268,7 +539,7 @@ void PrefsDialog::setAdvanced()
 
     all->setChecked( true );
     stack->setCurrentIndex( ADVANCED );
-    setWindowTitle( qtr( "Advanced Preferences" ) );
+    setWindowTitle( qtr( "Advanced Settings" ) );
 }
 
 void PrefsDialog::setSimple()
@@ -288,7 +559,7 @@ void PrefsDialog::setSimple()
 
     simple->setChecked( true );
     stack->setCurrentIndex( SIMPLE );
-    setWindowTitle( qtr( "Simple Preferences" ) );
+    setWindowTitle( qtr( "Settings" ) );
 }
 
 /* Switching from on simple panel to another */

@@ -44,7 +44,10 @@ class MLFoldersEditor;
 #endif
 
 #include <QWidget>
+#include <QList>
 class QLineEdit;
+class QToolButton;
+class QLabel;
 class QLabel;
 class QPushButton;
 class QAbstractButton;
@@ -85,6 +88,13 @@ public:
     virtual ~SPrefsCatList() {}
 private:
     qt_intf_t *p_intf;
+    QLineEdit *categorySearch {};
+    QLabel *appSectionLabel {};
+    QLabel *mediaSectionLabel {};
+    QList<QToolButton *> appCategoryButtons;
+    QList<QToolButton *> mediaCategoryButtons;
+
+    void filterCategories( const QString &text );
 signals:
     void currentItemChanged( int );
 public slots:

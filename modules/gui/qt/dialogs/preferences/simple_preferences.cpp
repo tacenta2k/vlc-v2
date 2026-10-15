@@ -46,6 +46,7 @@
 #include <QSignalMapper>
 #include <QVBoxLayout>
 #include <QScrollArea>
+#include <QLineEdit>
 
 #include <QStyleFactory>
 #include <QScreen>
@@ -223,58 +224,134 @@ private:
 SPrefsCatList::SPrefsCatList( qt_intf_t *_p_intf, QWidget *_parent ) :
                                   QWidget( _parent ), p_intf( _p_intf )
 {
-    QHBoxLayout *layout = new QHBoxLayout();
+    auto *layout = new QVBoxLayout( this );
+    layout->setContentsMargins( 0, 0, 0, 0 );
+    layout->setSpacing( 8 );
 
-    /* Use autoExclusive buttons and a mapper as QButtonGroup can't
-       set focus (keys) when it manages the buttons's exclusivity.
-       See QT bugs 131 & 816 and QAbstractButton's source code. */
-    QSignalMapper *mapper = new QSignalMapper( layout );
+    categorySearch = new QLineEdit( this );
+    categorySearch->setObjectName( "settingsSearchField" );
+    categorySearch->setClearButtonEnabled( true );
+    categorySearch->setPlaceholderText( qtr( "Search settings" ) );
+    categorySearch->setMinimumHeight( 34 );
+    categorySearch->setAccessibleName( qtr( "Search settings categories" ) );
+    layout->addWidget( categorySearch );
+
+    auto *categoryList = new QWidget( this );
+    auto *categoryLayout = new QVBoxLayout( categoryList );
+    categoryLayout->setContentsMargins( 0, 0, 0, 0 );
+    categoryLayout->setSpacing( 2 );
+
+    auto addSectionLabel = [&]( const QString &text ) {
+        auto *label = new QLabel( text, categoryList );
+        label->setObjectName( "settingsSectionLabel" );
+        categoryLayout->addWidget( label );
+        return label;
+    };
+
+    appSectionLabel = addSectionLabel( qtr( "App" ) );
+    mediaSectionLabel = nullptr;
+
+    /*
+     * Use auto-exclusive buttons and a mapper as QButtonGroup cannot set focus
+     * reliably for these keyboard-navigable category buttons on all supported Qt
+     * versions. The original category enum and panel mapping remain unchanged.
+     */
+    auto *mapper = new QSignalMapper( categoryList );
     connect( mapper, &QSignalMapper::mappedInt, this, &SPrefsCatList::switchPanel );
-    qreal dpr = devicePixelRatioF();
 
-    auto addCategory = [&]( QString label, QString ltooltip, QString icon, int numb) {
-        QToolButton * button = new QToolButton( this );
-        /* Scale icon to non native size outside of toolbutton to avoid widget size */
-        /* computation using native size */
-        QPixmap scaled = QPixmap( icon )
-              .scaledToHeight( ICON_HEIGHT * dpr, Qt::SmoothTransformation );
+    qreal dpr = devicePixelRatioF();
+    auto addCategory = [&]( const QString &label, const QString &ltooltip,
+                            const QString &icon, int numb, bool appCategory ) {
+        auto *button = new QToolButton( categoryList );
+        QPixmap scaled = QPixmap( icon ).scaled(
+            QSize( qRound( 20 * dpr ), qRound( 20 * dpr ) ),
+            Qt::KeepAspectRatio, Qt::SmoothTransformation );
         scaled.setDevicePixelRatio( dpr );
+
+        button->setObjectName( "settingsCategoryButton" );
         button->setIcon( scaled );
         button->setText( label );
         button->setToolTip( ltooltip );
-        button->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
-        button->setIconSize( QSize( ICON_WIDTH, ICON_HEIGHT ) );
-        button->setMinimumWidth( 40 + ICON_WIDTH );
-        button->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum);
+        button->setAccessibleName( label );
+        button->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
+        button->setIconSize( QSize( 20, 20 ) );
+        button->setMinimumWidth( 0 );
+        button->setMinimumHeight( 38 );
+        button->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
         button->setAutoRaise( true );
         button->setCheckable( true );
         button->setAutoExclusive( true );
-        connect( button, &QToolButton::clicked, mapper, QOverload<>::of(&QSignalMapper::map) );
+
+        connect( button, &QToolButton::clicked,
+                 mapper, QOverload<>::of( &QSignalMapper::map ) );
         mapper->setMapping( button, numb );
-        layout->addWidget( button );
+        categoryLayout->addWidget( button );
+
+        if ( appCategory )
+            appCategoryButtons.append( button );
+        else
+            mediaCategoryButtons.append( button );
+
+        return button;
     };
 
-    addCategory( qfut(INTF_TITLE), qfut(INTF_TOOLTIP), ":/prefsmenu/spref_interface.png" , SPrefsInterface );
-    addCategory( qfut(AUDIO_TITLE), qfut(AUDIO_TOOLTIP), ":/prefsmenu/spref_audio.png", SPrefsAudio );
-    addCategory( qfut(VIDEO_TITLE), qfut(VIDEO_TOOLTIP), ":/prefsmenu/spref_video.png", SPrefsVideo );
-    addCategory( qfut(SUBPIC_TITLE), qfut(SUBPIC_TOOLTIP), ":/prefsmenu/spref_subtitles.png", SPrefsSubtitles );
-    addCategory( qfut(INPUT_TITLE), qfut(INPUT_TOOLTIP), ":/prefsmenu/spref_input.png", SPrefsInputAndCodecs );
-    addCategory( qfut(HOTKEYS_TITLE), qfut(HOTKEYS_TOOLTIP), ":/prefsmenu/spref_hotkeys.png", SPrefsHotkeys );
+    auto *interfaceButton = addCategory(
+        qtr( "Interface" ), qfut( INTF_TOOLTIP ),
+        ":/prefsmenu/spref_interface.png", SPrefsInterface, true );
+    addCategory( qtr( "Controls" ), qfut( HOTKEYS_TOOLTIP ),
+                 ":/prefsmenu/spref_hotkeys.png", SPrefsHotkeys, true );
+
+    mediaSectionLabel = addSectionLabel( qtr( "Media" ) );
+    addCategory( qtr( "Playback" ), qfut( INPUT_TOOLTIP ),
+                 ":/prefsmenu/spref_input.png", SPrefsInputAndCodecs, false );
+    addCategory( qtr( "Video" ), qfut( VIDEO_TOOLTIP ),
+                 ":/prefsmenu/spref_video.png", SPrefsVideo, false );
+    addCategory( qtr( "Audio" ), qfut( AUDIO_TOOLTIP ),
+                 ":/prefsmenu/spref_audio.png", SPrefsAudio, false );
+    addCategory( qtr( "Subtitles" ), qfut( SUBPIC_TOOLTIP ),
+                 ":/prefsmenu/spref_subtitles.png", SPrefsSubtitles, false );
     if ( vlc_ml_instance_get( p_intf ) != nullptr )
-        addCategory( qfut(ML_TITLE), qfut(ML_TOOLTIP), ":/prefsmenu/spref_medialibrary.png", SPrefsMediaLibrary );
+        addCategory( qtr( "Library" ), qfut( ML_TOOLTIP ),
+                     ":/prefsmenu/spref_medialibrary.png", SPrefsMediaLibrary, false );
 
-    qobject_cast<QToolButton*>(mapper->mapping(SPrefsInterface))->setChecked(true);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing( 1 );
+    categoryLayout->addStretch( 1 );
+    layout->addWidget( categoryList, 1 );
 
-    setSizePolicy(QSizePolicy::MinimumExpanding,QSizePolicy::Preferred);
-    setMinimumWidth( ICON_HEIGHT * 6 + 10 );
+    interfaceButton->setChecked( true );
+
+    connect( categorySearch, &QLineEdit::textChanged,
+             this, &SPrefsCatList::filterCategories );
+
+    setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Expanding );
+    setMinimumWidth( 0 );
     setLayout( layout );
 }
 
 void SPrefsCatList::switchPanel( int i )
 {
     emit currentItemChanged( i );
+}
+
+void SPrefsCatList::filterCategories( const QString &text )
+{
+    auto filterGroup = [&]( const QList<QToolButton *> &buttons ) {
+        bool anyVisible = false;
+        for ( auto *button : buttons ) {
+            const bool matches = text.trimmed().isEmpty()
+                || button->text().contains( text.trimmed(), Qt::CaseInsensitive );
+            button->setVisible( matches );
+            anyVisible = anyVisible || matches;
+        }
+        return anyVisible;
+    };
+
+    const bool appVisible = filterGroup( appCategoryButtons );
+    const bool mediaVisible = filterGroup( mediaCategoryButtons );
+
+    if ( appSectionLabel )
+        appSectionLabel->setVisible( appVisible );
+    if ( mediaSectionLabel )
+        mediaSectionLabel->setVisible( mediaVisible );
 }
 
 /*********************************************************************
@@ -363,12 +440,15 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
 
     // Title Label
     QLabel *panel_label = new QLabel;
+    panel_label->setObjectName( "settingsPageTitle" );
+    panel->setObjectName( "settingsPage" );
     QFont labelFont = QApplication::font();
-    labelFont.setPointSize( labelFont.pointSize() + 6 );
+    labelFont.setPointSize( labelFont.pointSize() + 4 );
     panel_label->setFont( labelFont );
 
     // Title <hr>
     QFrame *title_line = new QFrame;
+    title_line->setObjectName( "settingsHeaderDivider" );
     title_line->setFrameShape(QFrame::HLine);
     title_line->setFrameShadow(QFrame::Sunken);
 
