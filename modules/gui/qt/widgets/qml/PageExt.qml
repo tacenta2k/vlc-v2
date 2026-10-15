@@ -273,9 +273,7 @@ T.Page {
                     onClicked: History.previous(Qt.MouseFocusReason)
                 }
 
-                // This VLC revision exposes backward history navigation only.
-                // Keep the Figma forward affordance visibly disabled until native
-                // forward-history support exists, rather than faking navigation.
+                // Forward navigation is wired to the native navigation history.
                 IconToolButton {
                     text: VLCIcons.next
                     description: qsTr("Forward")
@@ -284,7 +282,8 @@ T.Page {
                     font.pixelSize: VLCStyle.icon_normal
                     Layout.preferredWidth: VLCStyle.dp(28, VLCStyle.scale)
                     Layout.preferredHeight: VLCStyle.dp(28, VLCStyle.scale)
-                    enabled: false
+                    enabled: !History.nextEmpty
+                    onClicked: History.next(Qt.MouseFocusReason)
                 }
 
                 Repeater {

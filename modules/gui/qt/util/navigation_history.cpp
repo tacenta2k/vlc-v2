@@ -13,8 +13,24 @@ bool NavigationHistory::isPreviousEmpty()
     return m_history.size() <= 1;
 }
 
+bool NavigationHistory::isNextEmpty() const
+{
+    return m_future.empty();
+}
+
+void NavigationHistory::clearForwardHistory()
+{
+    if (m_future.empty())
+        return;
+
+    m_future.clear();
+    emit nextEmptyChanged(true);
+}
+
 void NavigationHistory::push(QStringList path, const QVariantMap& properties, Qt::FocusReason focusReason)
 {
+    clearForwardHistory();
+
     auto prop = std::make_unique<QQmlPropertyMap>();
     for (auto it =  properties.keyValueBegin(); it != properties.keyValueEnd(); ++it)
         prop->insert((*it).first, (*it).second);
@@ -31,6 +47,8 @@ void NavigationHistory::push(QStringList path, const QVariantMap& properties, Qt
 
 void NavigationHistory::push(QStringList path, Qt::FocusReason focusReason)
 {
+    clearForwardHistory();
+
     m_history.emplace_back(path, std::make_unique<QQmlPropertyMap>());
 
     updateCurrent();
@@ -102,6 +120,8 @@ static bool isNodeValid(const QQmlPropertyMap& value)
 
 void NavigationHistory::update(QStringList path)
 {
+    clearForwardHistory();
+
     if (m_history.size() == 0)
     {
         m_history.emplace_back(path, std::make_unique<QQmlPropertyMap>());
@@ -116,6 +136,8 @@ void NavigationHistory::update(QStringList path)
 
 void NavigationHistory::update(QStringList path, const QVariantMap& properties)
 {
+    clearForwardHistory();
+
     if (m_history.size() == 0)
     {
         auto prop = std::make_unique<QQmlPropertyMap>();
@@ -136,9 +158,13 @@ void NavigationHistory::update(QStringList path, const QVariantMap& properties)
 
 void NavigationHistory::previous(Qt::FocusReason reason)
 {
-    if (m_history.size() == 1)
+    if (m_history.size() <= 1)
         return;
 
+    const bool nextWasEmpty = isNextEmpty();
+
+    // Preserve the current page for forward navigation before moving back.
+    m_future.emplace_back(std::move(m_history.back()));
     m_history.pop_back();
 
     while (!isNodeValid(*m_history.back().second)) {
@@ -149,6 +175,46 @@ void NavigationHistory::previous(Qt::FocusReason reason)
 
     if (m_history.size() == 1)
         emit previousEmptyChanged(true);
+
+    if (nextWasEmpty)
+        emit nextEmptyChanged(false);
+
+    updateCurrent();
+    emit navigate(reason);
+}
+
+void NavigationHistory::next(Qt::FocusReason reason)
+{
+    if (m_future.empty())
+        return;
+
+    const bool previousWasEmpty = isPreviousEmpty();
+    const size_t oldHistorySize = m_history.size();
+
+    // Skip stale entries just as previous() skips history entries whose
+    // QML properties no longer refer to valid objects.
+    while (!m_future.empty()) {
+        auto entry = std::move(m_future.back());
+        m_future.pop_back();
+
+        if (!isNodeValid(*entry.second))
+            continue;
+
+        m_history.emplace_back(std::move(entry));
+        break;
+    }
+
+    if (m_history.size() == oldHistorySize) {
+        // Every remaining forward entry was stale.
+        emit nextEmptyChanged(true);
+        return;
+    }
+
+    if (previousWasEmpty && !isPreviousEmpty())
+        emit previousEmptyChanged(false);
+
+    if (m_future.empty())
+        emit nextEmptyChanged(true);
 
     updateCurrent();
     emit navigate(reason);
